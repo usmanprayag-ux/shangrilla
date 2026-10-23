@@ -1,0 +1,1201 @@
+import React, { useEffect, useState, useMemo } from 'react';
+import {
+  ShoppingBag,
+  Flame,
+  Clock,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  Tv,
+  UtensilsCrossed,
+  Sparkles,
+  QrCode,
+  Search,
+  ArrowUpRight,
+  Check,
+  History,
+  Star,
+  Receipt,
+  PartyPopper,
+  Crown,
+  Menu as MenuIcon,
+  X,
+  Compass,
+  Calendar,
+  UserCheck,
+  UserPlus,
+  ArrowRight,
+  Heart,
+  ChevronRight,
+  Lock
+} from 'lucide-react';
+import { Location, MenuItem, Order } from './types/models';
+import { api } from './services/api';
+import { DishDetailModal } from './components/DishDetailModal';
+import { CartDrawer, CartItem } from './components/CartDrawer';
+import { DigitalBillModal } from './components/DigitalBillModal';
+import { OrderTrackerModal } from './components/OrderTrackerModal';
+import { CustomerFeedbackModal } from './components/CustomerFeedbackModal';
+import { OrderHistoryModal } from './components/OrderHistoryModal';
+import { BookEventModal } from './components/BookEventModal';
+import { LoyaltyModal } from './components/LoyaltyModal';
+import { TableBookingModal } from './components/TableBookingModal';
+import { BecomeMemberModal } from './components/BecomeMemberModal';
+import { StaffLoginModal } from './components/StaffLoginModal';
+import { VenueSelectModal } from './components/VenueSelectModal';
+import { LocationMap } from './components/LocationMap';
+import { KitchenDisplay } from './components/KitchenDisplay';
+import { CashierDashboard } from './components/CashierDashboard';
+import { CollectionTV } from './components/CollectionTV';
+import { AdminPanel } from './components/AdminPanel';
+
+export function App() {
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [activeLocation, setActiveLocation] = useState<Location | null>(null);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [vegOnly, setVegOnly] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Cart state
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+
+  // Table QR Detection from URL
+  const [tableParam, setTableParam] = useState<string | null>(null);
+
+  // User & Loyalty state
+  const [customerPhone, setCustomerPhone] = useState<string>(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('shangrilla_customer_phone')) || '';
+  });
+  const [customerName, setCustomerName] = useState<string>(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('shangrilla_customer_name')) || '';
+  });
+  const [pastOrders, setPastOrders] = useState<Order[]>([]);
+
+  // Navigation & Drawer states
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
+
+  // Modals
+  const [selectedDish, setSelectedDish] = useState<MenuItem | null>(null);
+  const [activeBillOrder, setActiveBillOrder] = useState<Order | null>(null);
+  const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
+  const [feedbackOrder, setFeedbackOrder] = useState<Order | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  const [isBookEventOpen, setIsBookEventOpen] = useState<boolean>(false);
+  const [isLoyaltyOpen, setIsLoyaltyOpen] = useState<boolean>(false);
+  const [isTableBookingOpen, setIsTableBookingOpen] = useState<boolean>(false);
+  const [isBecomeMemberOpen, setIsBecomeMemberOpen] = useState<boolean>(false);
+  const [isStaffLoginOpen, setIsStaffLoginOpen] = useState<boolean>(false);
+  const [isVenueSelectOpen, setIsVenueSelectOpen] = useState<boolean>(false);
+  const [isInitialVenuePrompt, setIsInitialVenuePrompt] = useState<boolean>(false);
+
+  // Operational View Modes (Password Protected)
+  const [currentView, setCurrentView] = useState<'customer' | 'kitchen' | 'cashier' | 'tv' | 'admin'>('customer');
+
+  // Load locations and menu
+  useEffect(() => {
+    async function init() {
+      try {
+        const locs = await api.getLocations();
+        setLocations(locs);
+
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          const locParam = params.get('location');
+          const tParam = params.get('table');
+          if (tParam) setTableParam(tParam);
+
+          const savedVenueId = localStorage.getItem('shangrilla_selected_venue');
+
+          if (locParam) {
+            const matched = locs.find(l => l.id === locParam);
+            if (matched) setActiveLocation(matched);
+            else setActiveLocation(locs[0]);
+          } else if (savedVenueId) {
+            const matched = locs.find(l => l.id === savedVenueId);
+            if (matched) setActiveLocation(matched);
+            else setActiveLocation(locs[0]);
+          } else {
+            // First visit: ask user which venue they are in
+            setActiveLocation(locs[0]);
+            setIsInitialVenuePrompt(true);
+            setIsVenueSelectOpen(true);
+          }
+        } else if (locs.length > 0) {
+          setActiveLocation(locs[0]);
+        }
+
+        const menu = await api.getMenu();
+        setMenuItems(menu);
+
+        const cats = Array.from(new Set(menu.map(m => m.category)));
+        setCategories(['All', ...cats]);
+      } catch (err) {
+        console.error('Initialization error:', err);
+      }
+    }
+    init();
+  }, []);
+
+  // Update menu when location changes
+  useEffect(() => {
+    if (!activeLocation) return;
+    api.getMenu(activeLocation.id).then(menu => {
+      setMenuItems(menu);
+      const cats = Array.from(new Set(menu.map(m => m.category)));
+      setCategories(['All', ...cats]);
+    });
+  }, [activeLocation]);
+
+  // Fetch past orders for personalized recommendations if customer has saved phone
+  useEffect(() => {
+    if (!customerPhone) return;
+    api.getOrders({ phone: customerPhone })
+      .then(ords => {
+        setPastOrders(ords);
+      })
+      .catch(() => {});
+  }, [customerPhone]);
+
+  const handleVenueSelected = (loc: Location) => {
+    setActiveLocation(loc);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('shangrilla_selected_venue', loc.id);
+    }
+    setIsVenueSelectOpen(false);
+    setIsInitialVenuePrompt(false);
+  };
+
+  // Cart operations
+  const handleAddToCart = (
+    item: MenuItem,
+    quantity: number,
+    selectedAddonIds: string[],
+    specialInstructions?: string
+  ) => {
+    setCart(prev => {
+      const existingIdx = prev.findIndex(
+        c =>
+          c.item.id === item.id &&
+          c.specialInstructions === specialInstructions &&
+          JSON.stringify(c.selectedAddonIds.sort()) === JSON.stringify(selectedAddonIds.sort())
+      );
+      if (existingIdx !== -1) {
+        const copy = [...prev];
+        copy[existingIdx].quantity += quantity;
+        return copy;
+      }
+      return [...prev, { item, quantity, selectedAddonIds, specialInstructions }];
+    });
+    setIsCartOpen(true);
+  };
+
+  const handleUpdateQuantity = (idx: number, qty: number) => {
+    setCart(prev => {
+      const copy = [...prev];
+      copy[idx].quantity = qty;
+      return copy;
+    });
+  };
+
+  const handleRemoveFromCart = (idx: number) => {
+    setCart(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const totalCartCount = cart.reduce((s, it) => s + it.quantity, 0);
+
+  // Personalized dish recommendations algorithm
+  const recommendedDishes = useMemo(() => {
+    if (menuItems.length === 0) return [];
+
+    if (pastOrders.length > 0) {
+      // Analyze user's order history
+      const orderedCount = new Map<string, number>();
+      const orderedCategories = new Map<string, number>();
+
+      for (const ord of pastOrders) {
+        for (const it of ord.items) {
+          orderedCount.set(it.menuItemId, (orderedCount.get(it.menuItemId) || 0) + it.quantity);
+          const dishObj = menuItems.find(m => m.id === it.menuItemId);
+          if (dishObj) {
+            orderedCategories.set(dishObj.category, (orderedCategories.get(dishObj.category) || 0) + 1);
+          }
+        }
+      }
+
+      // Past dishes ordered
+      const pastFavs = menuItems
+        .filter(m => orderedCount.has(m.id))
+        .sort((a, b) => (orderedCount.get(b.id) || 0) - (orderedCount.get(a.id) || 0));
+
+      // Category matches
+      const favoriteCat = Array.from(orderedCategories.entries()).sort((a, b) => b[1] - a[1])[0]?.[0];
+      const categoryRecs = favoriteCat
+        ? menuItems.filter(m => m.category === favoriteCat && !orderedCount.has(m.id))
+        : [];
+
+      const combined = [...pastFavs, ...categoryRecs];
+      if (combined.length >= 4) return combined.slice(0, 4);
+    }
+
+    // Default signature crowd-pleasers
+    const featured = menuItems.filter(m => m.isFeatured);
+    return featured.length >= 4 ? featured.slice(0, 4) : menuItems.slice(0, 4);
+  }, [menuItems, pastOrders]);
+
+  // Filtered menu
+  const filteredDishes = menuItems.filter(dish => {
+    const matchesCategory = activeCategory === 'All' || dish.category === activeCategory;
+    const matchesVeg = !vegOnly || dish.isVeg;
+    const matchesSearch =
+      !searchQuery.trim() ||
+      dish.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (dish.hindiName && dish.hindiName.includes(searchQuery)) ||
+      dish.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesVeg && matchesSearch;
+  });
+
+  // Operational View Switching (Protected)
+  if (currentView === 'kitchen') {
+    return <KitchenDisplay locations={locations} onExit={() => setCurrentView('customer')} />;
+  }
+  if (currentView === 'cashier') {
+    return <CashierDashboard locations={locations} onExit={() => setCurrentView('customer')} />;
+  }
+  if (currentView === 'tv') {
+    return <CollectionTV locations={locations} onExit={() => setCurrentView('customer')} />;
+  }
+  if (currentView === 'admin') {
+    return (
+      <AdminPanel
+        locations={locations}
+        onExit={() => setCurrentView('customer')}
+        onOpenTableOrdering={(url) => {
+          window.location.href = url;
+        }}
+      />
+    );
+  }
+
+  // Curated culinary imagery
+  const galleryStrip = [
+    {
+      title: 'Refreshing Mango Saffron Cooler',
+      category: 'Signature Drinks',
+      imageUrl: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      title: 'Hazratganj Royal Dining Hall',
+      category: 'Ambience',
+      imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      title: 'Melt-in-Mouth Awadhi Starters',
+      category: 'Plated Appetizer',
+      imageUrl: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      title: 'Charcoal Tandoor Live Grill',
+      category: 'Live Fire',
+      imageUrl: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      title: 'Master Bawarchis Open Kitchen',
+      category: 'Kitchen Craft',
+      imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      title: 'Herb Crusted Succulent Chops',
+      category: 'Mughlai Main',
+      imageUrl: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      title: 'Royal Shahi Awadhi Mithai',
+      category: 'Desserts',
+      imageUrl: 'https://images.unsplash.com/photo-1579954115545-a95591f28bfc?auto=format&fit=crop&w=600&q=80'
+    }
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#100d0e] text-[#f5efe6] font-['Plus_Jakarta_Sans',sans-serif] selection:bg-[#d97706]/30 selection:text-white flex flex-col">
+      {/* 1. FLOATING GLASSMORPHISM SEARCH BAR & TOP NAVIGATION WITH HAMBURGER MENU */}
+      <div className="fixed top-4 inset-x-0 z-40 flex justify-center px-3 sm:px-4 pointer-events-none">
+        <header className="pointer-events-auto w-full max-w-5xl bg-[#191315]/80 backdrop-blur-xl border border-white/10 rounded-2xl px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 sm:gap-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)]">
+          {/* Brand Wordmark */}
+          <a href="/" className="flex items-center gap-2 group shrink-0">
+            <span className="font-['Oswald',sans-serif] font-bold text-xl sm:text-2xl text-white tracking-wider uppercase group-hover:text-[#f5d78e] transition-colors">
+              SHANGRILLA
+            </span>
+          </a>
+
+          {/* Integrated Glassmorphism Search Bar */}
+          <div className="relative flex-1 max-w-xs hidden sm:block">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+            <input
+              type="text"
+              placeholder="Search menu items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-7 py-1.5 bg-white/5 hover:bg-white/10 focus:bg-black/50 border border-white/10 focus:border-[#d4972e] rounded-xl text-xs text-white placeholder-stone-400 focus:outline-none transition-all backdrop-blur-md"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-white"
+                aria-label="Clear search"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Center Navigation Links: Strictly Menu, About, Locations, My Orders */}
+          <nav className="hidden md:flex items-center gap-6 text-[11px] font-['Oswald',sans-serif] font-semibold uppercase tracking-widest text-stone-300">
+            <a href="#menu" className="hover:text-white transition-colors">
+              Menu
+            </a>
+            <a href="#about" className="hover:text-white transition-colors">
+              About
+            </a>
+            <a href="#locations" className="hover:text-white transition-colors">
+              Locations
+            </a>
+            <button
+              onClick={() => setIsHistoryOpen(true)}
+              className="hover:text-white transition-colors flex items-center gap-1.5 text-stone-300"
+            >
+              <History className="w-3.5 h-3.5 text-[#e5a83b]" />
+              <span>My Orders</span>
+            </button>
+          </nav>
+
+          {/* Right Section: Active Venue Badge, Cart & Hamburger Menu Button */}
+          <div className="flex items-center gap-2">
+            {/* Active Venue Switcher Chip */}
+            {activeLocation && (
+              <button
+                type="button"
+                onClick={() => setIsVenueSelectOpen(true)}
+                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-stone-300 hover:text-white text-[10px] font-mono transition-all"
+                title="Click to switch venue branch"
+              >
+                <Compass className="w-3 h-3 text-[#d4972e]" />
+                <span className="truncate max-w-[100px]">
+                  {activeLocation.code === 'DHABA' ? 'Highway Dhaba' : 'Hazratganj'}
+                </span>
+                <span className="text-stone-500 text-[9px]">▾</span>
+              </button>
+            )}
+
+            {/* Shopping Bag Button */}
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-2 text-stone-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors"
+              aria-label="Shopping Cart"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              {totalCartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#e5a83b] text-black font-mono font-bold text-[10px] rounded-full flex items-center justify-center">
+                  {totalCartCount}
+                </span>
+              )}
+            </button>
+
+            {/* Hamburger Menu Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)}
+              className="p-2 text-stone-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors"
+              aria-label="Toggle menu"
+            >
+              <MenuIcon className="w-4 h-4" />
+            </button>
+          </div>
+        </header>
+      </div>
+
+      {/* HAMBURGER SIDE DRAWER (Glassmorphism Overlay & Drawer) */}
+      {isMobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div
+            className="fixed inset-0"
+            onClick={() => setIsMobileDrawerOpen(false)}
+          />
+          <div className="relative w-full max-w-sm bg-[#161113]/95 backdrop-blur-2xl border-l border-white/10 h-full p-6 flex flex-col justify-between shadow-2xl z-10 overflow-y-auto">
+            <div className="space-y-6">
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-stone-800">
+                <span className="font-['Oswald',sans-serif] font-bold text-xl text-white tracking-wider uppercase">
+                  SHANGRILLA
+                </span>
+                <button
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Active Venue Switcher Box */}
+              <div className="p-3.5 rounded-xl bg-black/40 border border-stone-800 space-y-2">
+                <div className="text-[10px] uppercase font-mono tracking-wider text-stone-400">
+                  Current Selected Venue
+                </div>
+                <div className="font-['Oswald',sans-serif] text-sm text-[#f5d78e] font-bold uppercase truncate">
+                  {activeLocation?.name || 'Shangrilla Dining'}
+                </div>
+                <button
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    setIsVenueSelectOpen(true);
+                  }}
+                  className="w-full py-1.5 text-xs rounded bg-white/5 hover:bg-white/10 text-white font-medium border border-white/10 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Compass className="w-3.5 h-3.5 text-[#d4972e]" />
+                  <span>Switch Venue (Restaurant / Dhaba)</span>
+                </button>
+              </div>
+
+              {/* Mobile Search Input */}
+              <div className="sm:hidden relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                <input
+                  type="text"
+                  placeholder="Search kebabs, biryani, curries..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-stone-500 focus:outline-none focus:border-[#d4972e]"
+                />
+              </div>
+
+              {/* Primary Drawer Navigation Links */}
+              <div className="space-y-1 text-sm font-['Oswald',sans-serif] uppercase tracking-wider">
+                <a
+                  href="#menu"
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="flex items-center justify-between p-2.5 rounded-lg text-stone-300 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <span>Our Menu</span>
+                  <ChevronRight className="w-4 h-4 text-stone-500" />
+                </a>
+
+                <a
+                  href="#about"
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="flex items-center justify-between p-2.5 rounded-lg text-stone-300 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <span>About Our Culinary Heritage</span>
+                  <ChevronRight className="w-4 h-4 text-stone-500" />
+                </a>
+
+                <a
+                  href="#locations"
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="flex items-center justify-between p-2.5 rounded-lg text-stone-300 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <span>Locations & Live Map</span>
+                  <ChevronRight className="w-4 h-4 text-stone-500" />
+                </a>
+
+                <button
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    setIsHistoryOpen(true);
+                  }}
+                  className="w-full flex items-center justify-between p-2.5 rounded-lg text-stone-300 hover:text-white hover:bg-white/5 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <History className="w-4 h-4 text-[#d4972e]" />
+                    <span>My Past Orders</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-stone-500" />
+                </button>
+              </div>
+
+              {/* Special Guest Actions */}
+              <div className="pt-2 border-t border-stone-800 space-y-2">
+                <button
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    setIsTableBookingOpen(true);
+                  }}
+                  className="w-full py-2.5 px-3.5 rounded-xl bg-[#d4972e] hover:bg-[#e5a83b] text-black font-['Oswald',sans-serif] uppercase font-bold text-xs tracking-wider flex items-center justify-center gap-2 shadow transition-all"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>Book a Table (Reservation)</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    setIsBookEventOpen(true);
+                  }}
+                  className="w-full py-2 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-[#f5d78e] font-['Oswald',sans-serif] uppercase font-semibold text-xs tracking-wider border border-white/10 flex items-center justify-center gap-2 transition-all"
+                >
+                  <PartyPopper className="w-3.5 h-3.5 text-[#d4972e]" />
+                  <span>Book an Event / Banquet</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    setIsBecomeMemberOpen(true);
+                  }}
+                  className="w-full py-2 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-stone-200 font-['Oswald',sans-serif] uppercase font-semibold text-xs tracking-wider border border-white/10 flex items-center justify-center gap-2 transition-all"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-[#d4972e]" />
+                  <span>Become a Member (+100 Pts)</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    setIsLoyaltyOpen(true);
+                  }}
+                  className="w-full py-2 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-stone-200 font-['Oswald',sans-serif] uppercase font-semibold text-xs tracking-wider border border-white/10 flex items-center justify-center gap-2 transition-all"
+                >
+                  <Crown className="w-3.5 h-3.5 text-[#d4972e]" />
+                  <span>Royal Rewards Perks</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Drawer Bottom: Password Protected Staff Login */}
+            <div className="pt-6 border-t border-stone-800 space-y-3">
+              <button
+                onClick={() => {
+                  setIsMobileDrawerOpen(false);
+                  setIsStaffLoginOpen(true);
+                }}
+                className="w-full py-2 px-3 rounded-lg bg-black/60 hover:bg-black text-stone-400 hover:text-[#d4972e] border border-stone-800 text-xs flex items-center justify-center gap-2 transition-colors font-mono"
+              >
+                <Lock className="w-3.5 h-3.5 text-[#d4972e]" />
+                <span>Staff Portal Login</span>
+              </button>
+
+              <div className="text-[10px] text-stone-600 text-center font-mono">
+                SHANGRILLA v2.4 · Lucknow, Uttar Pradesh
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. FULL-BLEED HERO SECTION */}
+      <section className="relative w-full min-h-[85vh] sm:min-h-[90vh] flex items-center justify-center text-center overflow-hidden bg-black pt-16">
+        {/* Background Live Cooking Video Loop */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover scale-105 filter brightness-75"
+          src="/assets/shangrilla-live-kitchen.mp4"
+        />
+
+        {/* Cinematic dark measured overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#100d0e] via-black/45 to-black/60 pointer-events-none" />
+
+        {/* Hero Content */}
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-20 space-y-6">
+          {/* Active Venue Banner */}
+          {activeLocation && (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-xs text-stone-200">
+              <span className="w-2 h-2 rounded-full bg-[#d4972e] animate-pulse" />
+              <span>Dining at: <strong className="text-white">{activeLocation.name}</strong></span>
+              <button
+                onClick={() => setIsVenueSelectOpen(true)}
+                className="text-[#d4972e] hover:underline ml-1 font-mono text-[11px]"
+              >
+                Change
+              </button>
+            </div>
+          )}
+
+          <h1 className="font-['Oswald',sans-serif] font-bold text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-white uppercase tracking-tight leading-[1.05]">
+            Savour the Flavours<br />That Tell a Story
+          </h1>
+
+          <p className="font-['Oswald',sans-serif] text-sm sm:text-base md:text-lg text-stone-200 uppercase tracking-widest font-normal max-w-xl mx-auto leading-relaxed">
+            Handcrafted dishes and signature drinks<br className="hidden sm:inline" /> made fresh, served with passion.
+          </p>
+
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+            <a
+              href="#menu"
+              className="px-7 py-3 bg-white hover:bg-stone-100 text-black font-['Oswald',sans-serif] font-bold text-xs uppercase tracking-wider rounded-sm shadow-xl transition-all hover:scale-105"
+            >
+              Explore Our Menu
+            </a>
+
+            <button
+              onClick={() => setIsTableBookingOpen(true)}
+              className="px-7 py-3 bg-[#d4972e] hover:bg-[#e5a83b] text-black font-['Oswald',sans-serif] font-bold text-xs uppercase tracking-wider rounded-sm shadow-xl transition-all hover:scale-105 flex items-center gap-1.5"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Book a Table</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. WARM CREAM SECTION */}
+      <section id="about" className="w-full bg-[#FAF7F2] text-[#1A1817] py-20 md:py-28 px-6 sm:px-8 lg:px-12">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
+          <div className="md:col-span-3">
+            <span className="font-['Oswald',sans-serif] text-xs font-semibold uppercase tracking-widest text-stone-600">
+              Welcome to Shangrilla
+            </span>
+          </div>
+
+          <div className="md:col-span-9 space-y-6">
+            <h2 className="font-['Oswald',sans-serif] font-bold text-3xl sm:text-4xl md:text-5xl text-[#1A1817] uppercase tracking-tight leading-[1.15]">
+              Seasonal dishes crafted with passion and the freshest ingredients.
+            </h2>
+
+            <p className="font-['Oswald',sans-serif] text-xs sm:text-sm text-stone-600 uppercase tracking-wider leading-relaxed font-normal max-w-2xl">
+              We bring vibrant flavors and warm hospitality together. From hearty classics to seasonal specials, every bite is crafted with passion and the freshest ingredients.
+            </p>
+
+            <div className="pt-2">
+              <a
+                href="#locations"
+                className="inline-block px-6 py-2.5 border border-stone-800 hover:border-black text-stone-900 hover:text-black font-['Oswald',sans-serif] font-semibold text-xs uppercase tracking-wider rounded-sm transition-colors"
+              >
+                View Venues & Live GPS Map →
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. HORIZONTAL IMAGE GALLERY STRIP */}
+      <section className="w-full bg-[#FAF7F2] pb-16 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5">
+            {galleryStrip.map((item, idx) => (
+              <div
+                key={idx}
+                className="relative aspect-[3/4] rounded-sm overflow-hidden bg-stone-300 shadow-md group"
+              >
+                <img
+                  src={item.imageUrl}
+                  alt={item.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src =
+                      'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80';
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 5. DARK CHARCOAL MENU SECTION WITH RECOMMENDED FOR YOU */}
+      <section id="menu" className="w-full bg-[#120F10] text-white py-20 md:py-28 px-4 sm:px-6 lg:px-8 border-t border-stone-800">
+        <div className="max-w-6xl mx-auto space-y-16">
+          {/* Section Header */}
+          <div className="text-center space-y-2">
+            <span className="font-['Oswald',sans-serif] text-[11px] uppercase tracking-widest text-stone-400 font-medium">
+              Our Dishes
+            </span>
+            <h2 className="font-['Oswald',sans-serif] font-bold text-3xl sm:text-4xl md:text-5xl text-white uppercase tracking-tight">
+              Dishes That Keep Guests Coming Back.
+            </h2>
+          </div>
+
+          {/* 5.1. RECOMMENDED FOR YOU SECTION (Personalized via Loyalty & Past Order History) */}
+          <div className="p-6 sm:p-8 rounded-2xl bg-[#181315] border border-[#d4972e]/30 shadow-2xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-stone-800/80">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-[#d4972e]/20 border border-[#d4972e]/30 flex items-center justify-center text-[#f5d78e]">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </span>
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-[#d4972e] font-semibold">
+                    {pastOrders.length > 0 ? 'Curated For Your Palate' : 'Royal Chef Selections'}
+                  </span>
+                </div>
+                <h3 className="font-['Oswald',sans-serif] font-bold text-2xl text-white uppercase tracking-tight">
+                  Recommended for You
+                </h3>
+                <p className="text-xs text-stone-400 font-light">
+                  {pastOrders.length > 0
+                    ? `Based on your previous orders as a royal member (${customerName || customerPhone}).`
+                    : 'Personalized signature dishes favored by food connoisseurs in Lucknow.'}
+                </p>
+              </div>
+
+              {!customerPhone && (
+                <button
+                  onClick={() => setIsBecomeMemberOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-stone-200 border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition-colors self-start sm:self-auto"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-[#d4972e]" />
+                  <span>Join Royal Club to Personalize</span>
+                </button>
+              )}
+            </div>
+
+            {/* Recommendations Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {recommendedDishes.map((dish) => (
+                <div
+                  key={`rec-${dish.id}`}
+                  onClick={() => setSelectedDish(dish)}
+                  className="group relative bg-[#1f191b] border border-stone-800 hover:border-[#d4972e]/60 rounded-xl overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-300 shadow-md hover:shadow-xl"
+                >
+                  <div className="relative aspect-[4/3] w-full bg-stone-900 overflow-hidden">
+                    <img
+                      src={dish.imageUrl}
+                      alt={dish.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+
+                    <div className="absolute top-2.5 left-2.5">
+                      <span className="px-2 py-0.5 rounded bg-black/60 backdrop-blur-md text-[10px] font-mono text-[#f5d78e] border border-white/10">
+                        {pastOrders.length > 0 ? 'Past Favorite' : 'Must Try'}
+                      </span>
+                    </div>
+
+                    <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-white">
+                      <span className="font-mono font-bold text-sm tabular-nums">
+                        ₹{dish.discountedPrice ?? dish.price}
+                      </span>
+                      <span className="text-[10px] uppercase font-mono text-stone-300">
+                        {dish.portionSize}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 space-y-2 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h4 className="font-['Oswald',sans-serif] font-bold text-sm text-white uppercase group-hover:text-[#f5d78e] transition-colors leading-snug">
+                        {dish.name}
+                      </h4>
+                      {dish.hindiName && (
+                        <span className="text-[10px] text-[#e5a83b] block mt-0.5 font-serif">
+                          {dish.hindiName}
+                        </span>
+                      )}
+                      <p className="text-[11px] text-stone-400 line-clamp-2 mt-1 font-light leading-relaxed">
+                        {dish.description}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedDish(dish);
+                      }}
+                      className="w-full py-2 bg-[#d4972e] hover:bg-[#e5a83b] text-black font-['Oswald',sans-serif] uppercase font-bold text-xs rounded-lg flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <span>Add to Order</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 5.2. Filter Bar: Categories + Veg Toggle */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-sm font-['Oswald',sans-serif] uppercase tracking-wider text-stone-300">
+                Explore Full Royal Menu ({filteredDishes.length} Dishes)
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setVegOnly(!vegOnly)}
+                className={`px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 border transition-colors ${
+                  vegOnly
+                    ? 'bg-emerald-950 text-emerald-300 border-emerald-600'
+                    : 'bg-[#1b1618] text-stone-400 border-stone-800 hover:text-white'
+                }`}
+              >
+                <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
+                  vegOnly ? 'border-emerald-400 bg-emerald-500' : 'border-stone-500'
+                }`}>
+                  {vegOnly && <Check className="w-3 h-3 text-black" />}
+                </div>
+                <span>Pure Vegetarian</span>
+              </button>
+            </div>
+
+            {/* Segmented Category Buttons */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-3.5 py-1.5 rounded text-xs font-['Oswald',sans-serif] uppercase tracking-wider whitespace-nowrap transition-colors ${
+                    activeCategory === cat
+                      ? 'bg-white text-black font-bold'
+                      : 'bg-[#1b1618] text-stone-400 hover:text-white border border-stone-800'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 5.3. Dishes Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {filteredDishes.map((dish) => (
+              <div
+                key={dish.id}
+                onClick={() => setSelectedDish(dish)}
+                className="group relative bg-[#1A1617] border border-stone-800 hover:border-stone-600 rounded-sm overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl"
+              >
+                <div className="relative aspect-[4/5] w-full bg-stone-900 overflow-hidden">
+                  <img
+                    src={dish.imageUrl}
+                    alt={dish.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80';
+                    }}
+                  />
+
+                  <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none" />
+                  <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none" />
+
+                  <div className="absolute top-3 inset-x-3">
+                    <span className="font-['Oswald',sans-serif] font-bold text-xs sm:text-sm text-white uppercase tracking-wider block leading-tight drop-shadow-md">
+                      {dish.name}
+                    </span>
+                    {dish.hindiName && (
+                      <span className="text-[10px] text-[#e5a83b] font-serif block mt-0.5">
+                        {dish.hindiName}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="absolute bottom-3 inset-x-3 flex items-center justify-between">
+                    <span className="font-mono font-bold text-sm text-white tabular-nums drop-shadow">
+                      ₹{dish.discountedPrice ?? dish.price}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedDish(dish);
+                      }}
+                      className="w-7 h-7 bg-white hover:bg-[#d4972e] text-black rounded-sm flex items-center justify-center transition-colors shadow"
+                      title="Add to cart / Customize"
+                      aria-label={`Add ${dish.name} to cart`}
+                    >
+                      <ArrowUpRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 6. LOCATIONS SECTION WITH LIVE INTERACTIVE MAP SYNCED TO USER VENUE */}
+      <section id="locations" className="w-full bg-[#161214] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-stone-800">
+        <div className="max-w-6xl mx-auto space-y-10">
+          <div className="text-center space-y-2">
+            <span className="font-['Oswald',sans-serif] text-xs uppercase tracking-widest text-[#d4972e]">
+              Lucknow, Uttar Pradesh
+            </span>
+            <h3 className="font-['Oswald',sans-serif] font-bold text-2xl sm:text-4xl text-white uppercase tracking-tight">
+              Our Venues & Live GPS Map
+            </h3>
+            <p className="text-xs text-stone-400 max-w-xl mx-auto font-light">
+              Explore our Hazratganj Royal Fine Dining Hall and our 24/7 Highway Express Dhaba on NH-27.
+            </p>
+          </div>
+
+          {/* Interactive Live Map Component synced to selected venue */}
+          <LocationMap
+            locations={locations}
+            activeLocationId={activeLocation?.id}
+            onSelectLocation={handleVenueSelected}
+            onBookTable={(locId) => {
+              const matched = locations.find(l => l.id === locId);
+              if (matched) setActiveLocation(matched);
+              setIsTableBookingOpen(true);
+            }}
+          />
+        </div>
+      </section>
+
+      {/* 7. BANQUET EVENTS & ROYAL REWARDS SHOWCASE */}
+      <section className="w-full py-16 px-4 bg-[#140F11] border-t border-stone-800/80">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Card 1: Banquets & Event Celebrations */}
+          <div className="relative p-8 rounded-2xl bg-gradient-to-br from-[#231a1d] via-[#281e21] to-[#1c1517] border border-[#cba158]/30 overflow-hidden flex flex-col justify-between space-y-6 shadow-xl">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-[#cba158]/15 border border-[#cba158]/30 flex items-center justify-center text-[#e5c179]">
+                  <PartyPopper className="w-4 h-4" />
+                </span>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-[#cba158]">
+                  IMPERIAL BANQUETS & LAWNS
+                </span>
+              </div>
+              <h3 className="font-['Oswald',sans-serif] font-bold text-2xl sm:text-3xl text-white uppercase tracking-tight">
+                Celebrate Royal Weddings & Grand Parties
+              </h3>
+              <p className="text-xs text-stone-300 font-light leading-relaxed">
+                Whether it's an intimate Awadhi dastarkhwan feast at our Hazratganj Royal Darbar Hall (150 Pax) or an open-air 500-guest celebration across our Highway Dhaba Grand Lawns, we orchestrate unforgettable culinary occasions.
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-wrap gap-3">
+              <button
+                onClick={() => setIsBookEventOpen(true)}
+                className="px-6 py-3 rounded-xl bg-[#d4972e] hover:bg-[#e5a83b] text-black font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
+              >
+                <span>Request Banquet / Event Booking</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Card 2: Royal Rewards Club */}
+          <div className="relative p-8 rounded-2xl bg-gradient-to-br from-[#1f191b] via-[#241c1f] to-[#171214] border border-[#cba158]/30 overflow-hidden flex flex-col justify-between space-y-6 shadow-xl">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-[#cba158]/15 border border-[#cba158]/30 flex items-center justify-center text-[#e5c179]">
+                  <Crown className="w-4 h-4" />
+                </span>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-[#cba158]">
+                  SHANGRILLA ROYAL CLUB
+                </span>
+              </div>
+              <h3 className="font-['Oswald',sans-serif] font-bold text-2xl sm:text-3xl text-white uppercase tracking-tight">
+                Earn 5% Back with Royal Rewards
+              </h3>
+              <p className="text-xs text-stone-300 font-light leading-relaxed">
+                Every dining experience awards you points linked seamlessly with your mobile number. Redeem points for instant discounts on online orders and dine-in bills, and ascend through Bronze, Silver, Gold, and Shahi VIP tiers.
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-wrap gap-3">
+              <button
+                onClick={() => setIsBecomeMemberOpen(true)}
+                className="px-6 py-3 rounded-xl bg-[#d4972e] hover:bg-[#e5a83b] text-black font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
+              >
+                <span>Become a Member (+100 Pts)</span>
+                <span>→</span>
+              </button>
+
+              <button
+                onClick={() => setIsLoyaltyOpen(true)}
+                className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs uppercase tracking-wider border border-white/15 transition-all"
+              >
+                View Points Balance
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 8. FOOTER WITH DISCREET STAFF LOGIN (No public admin bar) */}
+      <footer className="w-full bg-[#0E0C0D] border-t border-stone-900 py-12 px-4 text-center text-xs text-stone-500">
+        <div className="max-w-4xl mx-auto space-y-5">
+          <span className="font-['Oswald',sans-serif] font-bold text-2xl text-white uppercase tracking-widest block">
+            SHANGRILLA
+          </span>
+          <div className="flex justify-center gap-6 text-stone-400 text-xs flex-wrap">
+            <a href="#menu" className="hover:text-white">Menu</a>
+            <a href="#about" className="hover:text-white">About</a>
+            <a href="#locations" className="hover:text-white">Locations</a>
+            <button onClick={() => setIsTableBookingOpen(true)} className="hover:text-white">Book a Table</button>
+            <button onClick={() => setIsBookEventOpen(true)} className="hover:text-white">Book an Event</button>
+            <button onClick={() => setIsBecomeMemberOpen(true)} className="hover:text-white text-[#d4972e]">Become a Member</button>
+            <button onClick={() => setIsLoyaltyOpen(true)} className="hover:text-white">Royal Rewards</button>
+            <button onClick={() => setIsHistoryOpen(true)} className="hover:text-white">Order History</button>
+            {/* Password protected staff login modal trigger */}
+            <button
+              onClick={() => setIsStaffLoginOpen(true)}
+              className="text-[#d4972e] hover:underline flex items-center gap-1 font-mono font-medium"
+            >
+              <Lock className="w-3 h-3" />
+              <span>Staff Login</span>
+            </button>
+          </div>
+          <p className="text-[11px] text-stone-600 font-light">
+            © {new Date().getFullYear()} SHANGRILLA Restaurant & Dhaba. All rights reserved. Lucknow, Uttar Pradesh.
+          </p>
+        </div>
+      </footer>
+
+      {/* --- ALL MODALS & DRAWERS --- */}
+
+      {/* Initial Venue Selection Modal */}
+      <VenueSelectModal
+        isOpen={isVenueSelectOpen}
+        onClose={() => setIsVenueSelectOpen(false)}
+        locations={locations}
+        activeLocationId={activeLocation?.id}
+        onSelectLocation={handleVenueSelected}
+        isInitialPrompt={isInitialVenuePrompt}
+      />
+
+      {/* Password Protected Staff Login Modal */}
+      <StaffLoginModal
+        isOpen={isStaffLoginOpen}
+        onClose={() => setIsStaffLoginOpen(false)}
+        onLoginSuccess={(role) => {
+          setCurrentView(role);
+        }}
+      />
+
+      {/* Table Booking Modal */}
+      <TableBookingModal
+        isOpen={isTableBookingOpen}
+        onClose={() => setIsTableBookingOpen(false)}
+        locations={locations}
+        defaultLocationId={activeLocation?.id}
+      />
+
+      {/* Become a Member Modal */}
+      <BecomeMemberModal
+        isOpen={isBecomeMemberOpen}
+        onClose={() => setIsBecomeMemberOpen(false)}
+        locations={locations}
+        onMemberRegistered={(phone, name) => {
+          setCustomerPhone(phone);
+          setCustomerName(name);
+        }}
+      />
+
+      {/* Dish Detail Modal */}
+      {selectedDish && (
+        <DishDetailModal
+          item={selectedDish}
+          onClose={() => setSelectedDish(null)}
+          onAddToCart={handleAddToCart}
+        />
+      )}
+
+      {/* Cart Drawer */}
+      {activeLocation && (
+        <CartDrawer
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          cart={cart}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveFromCart}
+          onClearCart={() => setCart([])}
+          location={activeLocation}
+          initialTable={tableParam || undefined}
+          onOrderSuccess={(placedOrder) => {
+            setCart([]);
+            setActiveBillOrder(placedOrder);
+          }}
+        />
+      )}
+
+      {/* Digital Bill Modal */}
+      {activeBillOrder && (
+        <DigitalBillModal
+          order={activeBillOrder}
+          onClose={() => setActiveBillOrder(null)}
+          onTrackOrder={(orderId) => {
+            setActiveBillOrder(null);
+            setTrackingOrderId(orderId);
+          }}
+          onOpenFeedback={(order) => {
+            setActiveBillOrder(null);
+            setFeedbackOrder(order);
+          }}
+        />
+      )}
+
+      {/* Order Tracker Modal */}
+      {trackingOrderId && (
+        <OrderTrackerModal
+          orderId={trackingOrderId}
+          onClose={() => setTrackingOrderId(null)}
+          onViewBill={(order) => {
+            setTrackingOrderId(null);
+            setActiveBillOrder(order);
+          }}
+          onOpenFeedback={(order) => {
+            setTrackingOrderId(null);
+            setFeedbackOrder(order);
+          }}
+        />
+      )}
+
+      {/* Customer Feedback Modal */}
+      {feedbackOrder && (
+        <CustomerFeedbackModal
+          order={feedbackOrder}
+          onClose={() => setFeedbackOrder(null)}
+          onFeedbackSubmitted={() => setFeedbackOrder(null)}
+        />
+      )}
+
+      {/* Order History Modal */}
+      {isHistoryOpen && (
+        <OrderHistoryModal
+          menuItems={menuItems}
+          onClose={() => setIsHistoryOpen(false)}
+          onViewBill={(order) => {
+            setIsHistoryOpen(false);
+            setActiveBillOrder(order);
+          }}
+          onTrackOrder={(orderId) => {
+            setIsHistoryOpen(false);
+            setTrackingOrderId(orderId);
+          }}
+          onOpenFeedback={(order) => {
+            setIsHistoryOpen(false);
+            setFeedbackOrder(order);
+          }}
+          onRepeatOrder={(items) => {
+            for (const { item, quantity } of items) {
+              handleAddToCart(item, quantity, []);
+            }
+          }}
+        />
+      )}
+
+      {/* Book an Event Modal */}
+      {isBookEventOpen && (
+        <BookEventModal
+          isOpen={isBookEventOpen}
+          onClose={() => setIsBookEventOpen(false)}
+          defaultLocationId={activeLocation?.id}
+        />
+      )}
+
+      {/* Royal Rewards Loyalty Modal */}
+      {isLoyaltyOpen && (
+        <LoyaltyModal
+          isOpen={isLoyaltyOpen}
+          onClose={() => setIsLoyaltyOpen(false)}
+          onSelectRedeem={() => {
+            setIsCartOpen(true);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+export default App;

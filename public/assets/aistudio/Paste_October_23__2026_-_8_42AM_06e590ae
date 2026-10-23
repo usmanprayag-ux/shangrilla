@@ -1,0 +1,969 @@
+# MASTER PROMPT: SHANGRILLA RESTAURANT & DHABA MANAGEMENT SYSTEM
+
+## 1. YOUR ROLE
+
+Act as an expert full-stack developer, software architect, UI/UX designer, database engineer, restaurant POS specialist, inventory management specialist, and cybersecurity engineer.
+
+Build a complete, functional, professional restaurant ordering and management platform named **SHANGRILLA** for one restaurant and one dhaba in Lucknow, Uttar Pradesh, India.
+
+This must be a real, connected web application, not merely a static website or a visual prototype. All major buttons, forms, dashboards, orders, stock operations, and administrative controls must work and persist data.
+
+If external services or credentials are required, implement the integration structure and explain how to configure them. Never pretend an unconfigured feature is operational.
+
+## 2. MAIN OBJECTIVES
+
+Build these interconnected modules:
+
+1. Professional customer-facing website.
+2. Online food menu.
+3. Shopping cart and checkout.
+4. Dine-in, takeaway, and pre-order system.
+5. Table-specific QR ordering.
+6. Short, automatically generated order numbers.
+7. Digital bills and downloadable receipts.
+8. UPI QR and cash-at-counter payments.
+9. Cashier dashboard.
+10. Live kitchen display.
+11. Bell notification sound for new orders.
+12. Customer-facing order collection TV.
+13. Advanced master admin panel.
+14. Separate restaurant and dhaba management.
+15. Inventory and stock forecasting.
+16. Recipe and ingredient costing.
+17. Supplier and purchase-order management.
+18. Sales, expenses, and profit analytics.
+19. Customer accounts and loyalty points.
+20. Coupons and promotional offers.
+21. Website design and content editor.
+22. Video and media management.
+23. Staff permissions.
+24. Excel, CSV, and PDF reports.
+25. Audit logs, security, and backups.
+
+All modules must share one authoritative backend and database.
+
+## 3. TECHNOLOGY STACK
+
+Use a modern stack suitable for Google AI Studio and Vercel.
+
+Preferred technologies:
+- Next.js with App Router.
+- React and TypeScript.
+- Tailwind CSS.
+- Reusable UI components.
+- PostgreSQL.
+- Supabase for database, authentication, storage, and real-time updates where appropriate.
+- Server-side API routes or server functions.
+- Zod or equivalent input validation.
+- A suitable charting library.
+- PDF and Excel generation libraries.
+
+Use compatible, stable dependencies. Organize the code into reusable components, services, database modules, and validation schemas.
+
+Never expose private API keys, database service-role keys, or secrets in browser code. Include an `.env.example` file containing placeholder environment variable names.
+
+## 4. BUSINESS CONFIGURATION
+
+Brand: SHANGRILLA.
+
+Location: Lucknow, Uttar Pradesh, India.
+
+Business structure:
+- One restaurant.
+- One dhaba.
+- One main owner account.
+- One manager account initially.
+
+Use a central admin panel with a location selector.
+
+The owner must be able to view either location separately or both together.
+
+Each location must have its own:
+- Menu and availability.
+- Orders.
+- Inventory.
+- Suppliers.
+- Tables and QR codes.
+- Kitchen settings.
+- Sales and expense records.
+- Operating hours.
+- Reports.
+
+Use INR (₹), the Asia/Kolkata timezone, and Indian date formatting.
+
+Make business details, taxes, opening hours, receipt information, and applicable charges configurable. Never invent registration numbers, addresses, or other official business information.
+
+## 5. PROFESSIONAL WEBSITE DESIGN
+
+Create a premium, custom-designed restaurant website that feels like the work of a professional design agency.
+
+Use:
+- Deep burgundy or charcoal.
+- Warm cream backgrounds.
+- Restrained gold accents.
+- Elegant typography.
+- High-quality food photography.
+- Thoughtful whitespace.
+- Subtle transitions.
+- Responsive layouts.
+- Consistent icons and spacing.
+
+Avoid generic AI-looking templates, excessive gradients, excessive rounded cards, unnecessary animations, fake reviews, and placeholder text in the finished customer-facing experience.
+
+Use the supplied reference image as inspiration without copying it exactly.
+
+Allow the owner to upload genuine restaurant images, logos, and promotional videos.
+
+### Website pages
+
+Build:
+- Home.
+- Menu.
+- Menu categories.
+- Dish details.
+- Search.
+- Cart.
+- Checkout.
+- Order confirmation.
+- Digital bill.
+- Order tracking.
+- Login and registration.
+- Customer profile.
+- Order history.
+- Loyalty and rewards.
+- Offers.
+- Gallery.
+- About.
+- Contact.
+- Privacy policy.
+- Terms and conditions.
+- Cancellation and refund policy.
+
+Make the website mobile-first and fully responsive.
+
+## 6. HOMEPAGE
+
+Create a polished homepage with:
+- Premium hero image or video.
+- SHANGRILLA branding.
+- Order Now and Explore Menu buttons.
+- Featured dishes.
+- Food categories.
+- Restaurant story.
+- Photo gallery.
+- Current offers.
+- Restaurant and dhaba selector.
+- Opening hours.
+- Contact information.
+- Footer.
+
+The main admin must control homepage content, section visibility, ordering, text, images, videos, colors, fonts, and promotional banners.
+
+Provide draft previews and a publish button so unpublished changes do not accidentally go live.
+
+## 7. MENU MANAGEMENT
+
+The owner must be able to create, edit, duplicate, hide, archive, and remove menu items without editing code.
+
+Each menu item should support:
+- Name and description.
+- Price and optional discounted price.
+- Images.
+- Category and subcategory.
+- Vegetarian or non-vegetarian designation where applicable.
+- Portion size.
+- Spice level.
+- Allergen information.
+- Customizations and add-ons.
+- Preparation-time estimate.
+- Availability.
+- Location-specific availability.
+- Recipe and ingredient mapping.
+- Applicable tax configuration.
+- Featured status.
+
+Support bulk imports using Excel and CSV with validation, previews, duplicate detection, and error reports.
+
+Historical orders and bills must retain the original item names and prices even if the menu changes later.
+
+## 8. CUSTOMER ORDERING SYSTEM
+
+Support:
+- Dine-in.
+- Takeaway.
+- Pre-orders for a future time.
+
+Allow guest checkout and registered customer accounts.
+
+### Table QR ordering
+
+Generate a unique QR code for each table.
+
+When scanned, the QR code should open the correct location's menu and associate the order with the appropriate table.
+
+Customers must be able to:
+- Browse food.
+- View prices.
+- Customize dishes.
+- Add items to a cart.
+- Enter special instructions.
+- Review their order.
+- Choose a payment method.
+- Submit their order.
+- Receive a bill.
+- Track their order.
+
+Also support general takeaway QR codes.
+
+Validate all location, table, price, and availability information on the server.
+
+### Cart
+
+Implement add, remove, quantity changes, customization, discounts, taxes, subtotal, and total calculations.
+
+The server must recalculate prices at checkout rather than trusting browser-submitted totals.
+
+Allow customers to request changes or cancellation within three minutes of placing an order, subject to kitchen status and the configured restaurant policy. Use server timestamps and record all changes.
+
+## 9. SHORT ORDER NUMBERS
+
+Generate short customer-facing order numbers, such as:
+
+024, 025, 026, 027.
+
+The visible counter resets every 48 hours from the configured cycle start time, using Asia/Kolkata as the timezone.
+
+Requirements:
+- Generate numbers on the server.
+- Use an atomic database counter or transaction.
+- Prevent duplicate numbers within the same location and cycle.
+- Store a permanent internal order UUID.
+- Store the order cycle identifier.
+- Preserve existing order numbers after a reset.
+- Never reassign numbers to outstanding orders.
+- Support concurrent orders safely.
+
+The short number may be reused in a later cycle, so staff must be able to distinguish orders using the location, cycle, timestamp, and other appropriate details.
+
+## 10. DIGITAL BILL AND SCREENSHOT REMINDER
+
+After successful order creation, show a professional digital receipt.
+
+Include:
+- SHANGRILLA branding.
+- Location.
+- Short order number.
+- Date and time.
+- Order type and table number.
+- Item names and quantities.
+- Prices.
+- Subtotal.
+- Applicable taxes.
+- Discounts.
+- Final total.
+- Payment method.
+- Payment status.
+- Receipt reference.
+
+Display this message:
+
+"Your order has been placed successfully!
+
+Order Number: [NUMBER]
+
+Please save or take a screenshot of your bill for easy reference when collecting your order.
+
+You can use your order number to check your order status on the SHANGRILLA collection display.
+
+Thank you for choosing SHANGRILLA!"
+
+Provide:
+- Download Bill as PDF.
+- Print Bill.
+- Save or Share Bill where supported.
+- Screenshot reminder.
+- Track Order.
+
+Never claim that a screenshot was automatically captured. Provide reliable download and print alternatives.
+
+## 11. PAYMENTS
+
+Initial payment methods:
+1. Fixed UPI QR.
+2. Cash at counter.
+
+The owner must be able to configure the UPI QR image and payment instructions.
+
+A QR scan does not prove that a payment succeeded. For the initial release, authorized staff must verify UPI receipt before marking it paid.
+
+Prepare the architecture for future payment gateway integration.
+
+### Payment statuses
+
+Use:
+- Pending.
+- Paid.
+- Failed, where applicable.
+- Partially refunded.
+- Refunded.
+
+Payment status must remain separate from order and kitchen status.
+
+An order may be PREPARING while its payment is PENDING.
+
+### Cashier dashboard
+
+The cashier must be able to:
+- Find orders by number.
+- Filter by location and payment status.
+- View the bill.
+- Confirm cash payment.
+- Confirm verified UPI payment.
+- Record payment method and reference.
+- Print or download receipts.
+- See who confirmed payment and when.
+
+Include a clear Mark as Paid button and confirmation step.
+
+Prevent duplicate payment confirmations. Record payment changes in an audit trail.
+
+Do not automatically mark orders as paid because a customer clicked a button, opened a QR code, or submitted an unverified payment screenshot.
+
+Counter-payment orders must be allowed into the kitchen according to the configured ordering policy.
+
+## 12. LIVE KITCHEN DISPLAY
+
+Create a dedicated full-screen kitchen interface optimized for an Android tablet in landscape mode.
+
+New orders must appear automatically without refreshing the page.
+
+Display:
+- Order number.
+- Location.
+- Table number or takeaway label.
+- Order time.
+- Preparation timer.
+- Items and quantities.
+- Customizations.
+- Special instructions.
+- Payment status.
+- Kitchen status.
+
+Workflow:
+
+RECEIVED → ACCEPTED → PREPARING → READY → COLLECTED.
+
+### New order notifications
+
+When a new order arrives:
+- Flash or highlight its card.
+- Play a short, pleasant bell sound.
+- Show a new-order indicator.
+- Start a preparation timer.
+- Keep the order highlighted until acknowledged.
+
+Use an original or properly licensed notification sound inspired by modern smartphone alerts, not a copied proprietary Apple sound.
+
+Include an Enable Sound control because browsers may require user interaction before playing audio.
+
+Avoid repeated sounds for the same order after reconnection or page refresh.
+
+Provide reconnection handling and a way to retrieve missed updates.
+
+### Kitchen actions
+
+Support:
+- Accept Order.
+- Start Preparing.
+- Mark as Ready.
+- View Details.
+- Print Kitchen Ticket.
+- Report an Issue.
+- Cancel Order where authorized.
+
+Validate status transitions on the server and record who performed each action.
+
+## 13. CUSTOMER COLLECTION TV
+
+Create a separate full-screen TV display.
+
+Show:
+- SHANGRILLA branding.
+- Large, readable order numbers.
+- Ready orders.
+- Food images.
+- Promotional videos.
+- Offers.
+- Announcements.
+
+The admin must be able to upload videos and images, create playlists, change their order, configure durations, schedule content, and activate or deactivate media.
+
+When the kitchen marks an order READY, its number must appear on the TV in real time.
+
+When staff mark it COLLECTED, remove it from the active list without deleting the order history.
+
+Support configurable automatic removal as a fallback.
+
+Keep order notifications visually distinct from promotional content.
+
+## 14. MASTER ADMIN PANEL
+
+Create a polished, advanced administrative dashboard with a collapsible sidebar.
+
+Include:
+
+1. Overview.
+2. Live Orders.
+3. Cashier and Payments.
+4. Menu Manager.
+5. Categories and Add-ons.
+6. Inventory and Stock.
+7. Recipes and Ingredients.
+8. Suppliers.
+9. Purchase Orders.
+10. Restaurant Management.
+11. Dhaba Management.
+12. Tables and QR Codes.
+13. Customer Management.
+14. Loyalty Program.
+15. Coupons and Offers.
+16. Website Editor.
+17. Media Library.
+18. Kitchen Settings.
+19. Collection TV Settings.
+20. Staff and Permissions.
+21. Sales Analytics.
+22. Expenses and Profit.
+23. Stock Forecasts.
+24. Reports and Exports.
+25. Notifications.
+26. Audit Logs.
+27. System Settings.
+28. Backup and Recovery.
+
+Every major feature must have working forms, persistent data, validation, search, filters, and useful error messages.
+
+Do not create decorative buttons that do nothing.
+
+## 15. ADVANCED INVENTORY MANAGEMENT
+
+Support stock for:
+- Raw ingredients.
+- Packaged goods.
+- Beverages.
+- Finished food.
+- Packaging materials.
+- Cleaning supplies.
+
+Track:
+- Item name and SKU.
+- Location.
+- Unit of measurement.
+- Available quantity.
+- Reorder level.
+- Safety stock.
+- Purchase price.
+- Supplier.
+- Batch number.
+- Expiry date.
+- Stock movement history.
+
+Support grams, kilograms, millilitres, litres, pieces, and configurable packaging units.
+
+Implement safe unit conversion.
+
+### Stock operations
+
+Support:
+- Opening stock.
+- Stock receipts.
+- Supplier deliveries.
+- Consumption.
+- Wastage.
+- Spoilage.
+- Expiry.
+- Adjustments.
+- Transfers between locations.
+- Returns.
+- Physical stock counts.
+
+Record every stock movement with timestamp, quantity, location, reason, and responsible user.
+
+Never silently overwrite stock history.
+
+## 16. RECIPES AND INGREDIENT CONSUMPTION
+
+Allow each dish to have a recipe defining ingredient quantities per serving.
+
+Connect sales and kitchen workflows to inventory reservations and consumption according to a configurable policy.
+
+When an order is cancelled, release applicable reservations but do not automatically restore ingredients already consumed.
+
+Prevent negative stock when configured, and require authorization and an audit reason for overrides.
+
+Support recipe costing and food-cost analysis.
+
+## 17. BULK DATA IMPORT
+
+Support large Excel and CSV files for:
+- Inventory.
+- Menu items.
+- Recipes.
+- Suppliers.
+- Historical sales.
+- Opening stock.
+- Supplier price lists.
+
+Implement:
+1. File validation.
+2. Column mapping.
+3. Data preview.
+4. Required-field validation.
+5. Duplicate detection.
+6. Invalid-row reporting.
+7. Confirmation before import.
+8. Import history.
+9. Downloadable error reports.
+10. Safe batching.
+
+Never silently discard invalid records.
+
+Distinguish imported historical records from live sales.
+
+## 18. STOCK FORECASTING
+
+Create a stock prediction dashboard.
+
+Ask the owner for:
+- Expected daily customer count.
+- Forecast period.
+- Expected demand by location.
+- Historical sales.
+- Recipe quantities.
+- Supplier delivery times.
+- Minimum stock.
+- Safety stock.
+- Upcoming events or busy days.
+
+Calculate:
+- Average daily ingredient consumption.
+- Estimated days remaining.
+- Expected future stock.
+- Shortage warnings.
+- Reorder suggestions.
+- Suggested purchase quantities.
+- Expiry warnings.
+
+Basic estimate:
+
+Days remaining = usable current stock ÷ estimated average daily consumption.
+
+Use actual historical ingredient consumption and sales where available.
+
+Clearly display assumptions and uncertainty. If insufficient data exists, ask the owner for the missing information and provide a clearly labelled preliminary estimate.
+
+Do not claim that a forecast is accurate without sufficient data.
+
+## 19. SUPPLIERS AND PURCHASE ORDERS
+
+Create supplier profiles with contact information, products, prices, delivery lead times, and purchase history.
+
+Support:
+- Draft purchase orders.
+- Approval.
+- Purchase order exports.
+- Partial deliveries.
+- Received quantities.
+- Invoice references.
+- Purchase price history.
+- Ordered-versus-received comparisons.
+
+Receiving stock must create corresponding inventory movements.
+
+## 20. SALES, EXPENSES, AND PROFIT ANALYTICS
+
+Build reports for:
+- Gross sales.
+- Net sales.
+- Discounts.
+- Taxes collected.
+- Refunds.
+- Paid and unpaid orders.
+- Cash received.
+- UPI receipts recorded.
+- Order counts.
+- Average order value.
+- Sales by item.
+- Sales by category.
+- Sales by location.
+- Daily, weekly, and monthly sales.
+
+Support operating expenses, including rent, electricity, salaries, transport, repairs, and miscellaneous expenses.
+
+Calculate food cost using recipe quantities and available purchase prices.
+
+Clearly distinguish revenue, cash collection, estimated gross profit, and estimated operating profit.
+
+Do not incorrectly label revenue minus ingredients as net profit.
+
+Provide Excel, CSV, and PDF exports where appropriate.
+
+## 21. CUSTOMERS, LOYALTY, AND OFFERS
+
+Support:
+- Guest checkout.
+- Registration and login.
+- Order history.
+- Repeat orders.
+- Favorite dishes.
+- Loyalty points.
+- Rewards.
+- Coupons.
+- Feedback.
+
+The main admin controls:
+- Points rules.
+- Redemption values.
+- Reward expiry.
+- Coupon validity.
+- Discount limits.
+- Minimum order value.
+- Eligible items.
+- Eligible locations.
+- Usage limits.
+
+Support percentage discounts, fixed discounts, item offers, category offers, time-based offers, and location-specific promotions.
+
+Validate all discounts and loyalty transactions on the server.
+
+Prevent unauthorized point manipulation and unintended coupon stacking.
+
+## 22. WEBSITE AND MEDIA EDITOR
+
+Create a designated section of the master admin panel for editing the public website.
+
+The owner can manage:
+- Homepage sections.
+- Headlines.
+- Descriptions.
+- Colors.
+- Fonts.
+- Images.
+- Videos.
+- Menu categories.
+- Featured dishes.
+- Promotional banners.
+- Offers.
+- Opening hours.
+- Contact details.
+- Gallery.
+- Footer content.
+
+Include image uploads, video uploads, a media library, previews, and publishing controls.
+
+Create a separate TV playlist manager with scheduling and playback settings.
+
+Use persistent media storage rather than temporary browser-only uploads.
+
+## 23. NOTIFICATIONS
+
+Implement in-app notifications for:
+- New orders.
+- Low stock.
+- Expiring stock.
+- Payment changes.
+- Import failures.
+- Supplier reminders.
+- Daily sales summaries.
+- Important administrative events.
+
+Design optional email, SMS, and messaging integrations for later configuration.
+
+Do not claim a message was delivered without provider confirmation.
+
+## 24. STAFF PERMISSIONS
+
+Initial roles:
+- OWNER.
+- MANAGER.
+
+The owner has full access across both locations.
+
+The manager receives only explicitly granted permissions.
+
+Prepare the system to support additional cashier and kitchen roles later.
+
+All sensitive permissions must be checked on the server, not merely by hiding interface buttons.
+
+## 25. SECURITY AND AUDIT LOGS
+
+Implement:
+- Secure authentication.
+- Server-side authorization.
+- Database constraints.
+- Input validation.
+- Rate limiting on sensitive operations.
+- Secure cookie settings.
+- Appropriate CSRF protections.
+- Protection against injection and unauthorized access.
+- Secure secret handling.
+- Database backups.
+- Documented recovery procedures.
+
+Record important events, including:
+- Menu price changes.
+- Stock adjustments.
+- Order cancellations.
+- Payment confirmations.
+- Refunds.
+- Permission changes.
+- Website publishing.
+- Purchase order changes.
+- Administrative overrides.
+
+Include acting user, timestamp, affected entity, action, and relevant before-and-after values.
+
+Never log passwords, authentication tokens, or payment secrets.
+
+## 26. DATABASE ARCHITECTURE
+
+Design a normalized relational database with appropriate indexes, constraints, foreign keys, and migrations.
+
+Include models for:
+- Locations.
+- Users and roles.
+- Customers.
+- Tables.
+- Menu categories and items.
+- Customization groups and options.
+- Recipes.
+- Ingredients.
+- Inventory balances and movements.
+- Stock reservations.
+- Suppliers and products.
+- Purchase orders and items.
+- Orders and order items.
+- Order status history.
+- Order number cycles.
+- Payments.
+- Payment audit events.
+- Refunds.
+- Loyalty accounts and transactions.
+- Coupons and redemptions.
+- Expenses.
+- Promotions.
+- Media assets.
+- TV playlists.
+- Notifications.
+- Audit logs.
+- Import batches and errors.
+- Business configuration.
+
+Use permanent internal UUIDs and database-enforced constraints.
+
+Store historical item names, prices, and tax details as order snapshots.
+
+Use integer minor units or an appropriate exact decimal representation for money. Never rely on floating-point arithmetic for financial calculations.
+
+Use transactions for operations affecting multiple related records.
+
+## 27. REAL-TIME SYNCHRONIZATION
+
+Synchronize:
+- Customer order tracking.
+- Kitchen display.
+- Cashier dashboard.
+- Collection TV.
+- Admin order dashboard.
+- Relevant inventory updates.
+
+Handle disconnections, reconnections, missed events, duplicate events, simultaneous actions, and stale data.
+
+Persist important changes before displaying them as successful.
+
+Provide reconciliation with authoritative server state after reconnection.
+
+## 28. CRITICAL BUSINESS RULES
+
+1. Generate order numbers on the server.
+2. Keep permanent internal order IDs.
+3. Reset visible numbers every configured 48-hour cycle.
+4. Never change numbers on existing orders.
+5. Keep payment status separate from kitchen status.
+6. Allow counter-payment orders into the kitchen according to policy.
+7. Require authorized payment confirmation.
+8. Maintain payment audit records.
+9. Recalculate prices on the server.
+10. Record stock reservations and consumption.
+11. Enforce cancellation and modification policies.
+12. Preserve historical receipt prices.
+13. Never silently delete orders.
+14. Allow location-specific and consolidated reporting.
+15. Protect sensitive actions with permissions.
+16. Remove collected orders from the TV without deleting history.
+17. Never treat an unverified payment as paid.
+18. Use server-side financial calculations.
+19. Record inventory changes.
+20. Make all important operations traceable.
+
+## 29. TESTING
+
+Create automated tests for:
+- Order number generation.
+- The 48-hour cycle reset.
+- Concurrent orders.
+- Existing orders during reset.
+- Cart totals.
+- Discounts and taxes.
+- Three-minute modification rules.
+- Payment permissions.
+- Duplicate payment confirmation.
+- Kitchen status transitions.
+- Inventory reservations.
+- Stock consumption.
+- Cancellation and reservation release.
+- Bulk imports.
+- Role permissions.
+- Report calculations.
+- Real-time reconnection.
+
+Use clearly labelled development sample data. Do not mix test records with production transactions.
+
+## 30. DEVELOPMENT PLAN
+
+Build in stages while maintaining one connected architecture.
+
+### Stage 1: Core website and ordering
+- Project setup.
+- Design system.
+- Homepage.
+- Menu.
+- Authentication.
+- Database schema.
+- Cart.
+- Checkout.
+- Short order numbers.
+- Digital receipts.
+- Basic order tracking.
+
+### Stage 2: Restaurant operations
+- Cashier.
+- Payment confirmation.
+- Kitchen display.
+- Bell notifications.
+- Collection TV.
+- Real-time synchronization.
+- Printing.
+
+### Stage 3: Inventory
+- Ingredients.
+- Recipes.
+- Stock movements.
+- Bulk imports.
+- Suppliers.
+- Purchase orders.
+- Stock forecasting.
+
+### Stage 4: Business intelligence
+- Sales analytics.
+- Expenses.
+- Recipe costing.
+- Profit estimates.
+- Reports.
+- Loyalty.
+- Coupons and promotions.
+
+### Stage 5: Advanced administration
+- Website editor.
+- Media library.
+- TV scheduling.
+- Notifications.
+- Audit logs.
+- Backups.
+- Security hardening.
+- Production deployment.
+
+Prioritize working, tested workflows instead of generating many incomplete pages.
+
+## 31. DEVELOPMENT INSTRUCTIONS
+
+Inspect the existing project before modifying it.
+
+If the workspace is empty, initialize the application.
+
+Then:
+1. Set up the project structure.
+2. Define the database schema and migrations.
+3. Configure environment variables.
+4. Build reusable UI components.
+5. Implement customer ordering.
+6. Implement the admin panel.
+7. Connect all features to persistent storage.
+8. Implement real-time synchronization.
+9. Add inventory and reporting.
+10. Test critical workflows.
+11. Document deployment.
+
+Do not stop after explaining the plan. Begin implementing the actual application in the available workspace.
+
+Do not create a single enormous component for the entire system.
+
+Do not use localStorage as the authoritative database for orders, payments, or inventory.
+
+Do not hardcode successful authentication, payments, or database operations.
+
+If a feature requires external credentials or hardware, implement what can be completed locally and document the remaining configuration.
+
+## 32. REQUIRED DELIVERABLES
+
+Provide:
+- Complete source code.
+- Customer website.
+- Master admin panel.
+- Cashier dashboard.
+- Kitchen display.
+- Collection TV.
+- Database schema and migrations.
+- Environment variable template.
+- Seed script.
+- Automated tests.
+- README.
+- Installation instructions.
+- Authentication and database setup.
+- Storage and real-time configuration.
+- Vercel deployment instructions.
+- Payment configuration.
+- Security checklist.
+- Feature completion checklist.
+- List of external integrations still requiring configuration.
+
+Do not claim that the application is production-ready until the necessary security rules, configuration, tests, and deployment checks have been completed.
+
+## 33. DEFINITION OF DONE
+
+The first working release must support this complete workflow:
+
+1. Owner signs in.
+2. Owner selects the restaurant or dhaba.
+3. Owner creates menu categories and dishes.
+4. Owner configures table QR codes and UPI QR.
+5. Customer opens the website or scans a table QR.
+6. Customer adds food to the cart.
+7. Customer submits an order.
+8. Server creates a permanent order ID and a short display number.
+9. Customer receives a digital bill and screenshot reminder.
+10. Kitchen tablet receives the order.
+11. Kitchen plays a bell after sound is enabled.
+12. Staff prepare the food.
+13. Cashier views the order and payment status.
+14. Cashier verifies and records cash or UPI payment.
+15. Kitchen marks the order READY.
+16. The number appears on the collection TV.
+17. Staff mark the order COLLECTED.
+18. The number disappears from the active collection list.
+19. Admin can review the order, payment record, and status history.
+20. Inventory records stock entries, recipes, consumption, imports, and estimated stock duration.
+
+Begin by examining the available development environment and implementing the first functional release. Continue in manageable stages without abandoning the shared architecture.
+
+At the end of each stage, state what actually works, what has been tested, and what still requires configuration. Never claim an unfinished feature is complete.

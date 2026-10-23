@@ -1,0 +1,6 @@
+{
+  "name": "SHANGRILLA Restaurant & Dhaba Management System",
+  "description": "Lucknow-authentic restaurant and dhaba system with online ordering, 48h short order numbers, live kitchen display, collection TV, cashier POS, inventory, recipes, and master management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
