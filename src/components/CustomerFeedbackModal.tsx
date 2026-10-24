@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Star, Heart, CheckCircle2, MessageSquare, Utensils, ThumbsUp } from 'lucide-react';
+import { X, Star, CheckCircle2, MessageSquare, Utensils, ThumbsUp } from 'lucide-react';
 import { Order, DishFeedback } from '../types/models';
 import { api } from '../services/api';
 
@@ -97,14 +97,14 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
             key={star}
             type="button"
             onClick={() => onRate(star)}
-            className="p-1 hover:scale-110 transition-transform focus:outline-none"
+            className="p-1 hover:scale-115 transition-transform focus:outline-none cursor-pointer"
             aria-label={`Rate ${star} stars`}
           >
             <Star
               className={`${size} ${
                 star <= currentRating
                   ? 'fill-[#cba158] text-[#cba158]'
-                  : 'text-stone-600 hover:text-stone-400'
+                  : 'text-stone-300 hover:text-[#cba158]/60'
               } transition-colors`}
             />
           </button>
@@ -114,11 +114,11 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-lg my-8 bg-[#181214] border border-[#cba158]/40 rounded-2xl p-6 sm:p-8 text-stone-100 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm overflow-y-auto animate-fade-in">
+      <div className="relative w-full max-w-lg my-8 bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 text-stone-800 shadow-2xl animate-modal-pop">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800 transition-colors"
+          className="absolute top-4 right-4 p-2 text-stone-400 hover:text-stone-800 rounded-lg hover:bg-stone-100 transition-colors cursor-pointer"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
@@ -126,21 +126,21 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
 
         {submitted ? (
           <div className="text-center py-8 space-y-4">
-            <div className="w-16 h-16 bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-inner">
+            <div className="w-16 h-16 bg-emerald-50 border-2 border-emerald-400 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h3 className="text-2xl font-serif font-bold text-white">
+            <h3 className="text-2xl font-serif font-bold text-stone-900">
               Shukriya! Thank You
             </h3>
-            <p className="text-xs sm:text-sm text-stone-300 max-w-sm mx-auto leading-relaxed font-light">
-              Your feedback on Order <strong className="text-[#cba158]">#{order.displayNumber}</strong> helps our Lucknowi Bawarchis and staff preserve culinary excellence.
+            <p className="text-xs sm:text-sm text-stone-600 max-w-sm mx-auto leading-relaxed">
+              Your feedback on Order <strong className="text-[#855e18]">#{order.displayNumber}</strong> helps our Lucknowi Bawarchis and staff preserve culinary excellence.
             </p>
-            <div className="p-3 bg-[#22171b] border border-stone-800 rounded-xl text-xs text-stone-400">
+            <div className="p-3 bg-[#faf8f5] border border-stone-200 rounded-xl text-xs text-stone-500">
               Your honest reviews have been recorded in our kitchen audit logs.
             </div>
             <button
               onClick={onClose}
-              className="mt-4 px-6 py-2.5 bg-[#cba158] hover:bg-[#dfb872] text-[#140e11] font-bold text-xs rounded-xl shadow-lg transition-colors"
+              className="mt-4 px-6 py-2.5 bg-gradient-to-r from-[#cba158] to-[#dfb872] hover:shadow-md text-stone-950 font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
             >
               Done
             </button>
@@ -148,46 +148,46 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Header */}
-            <div className="text-center pb-4 border-b border-stone-800">
-              <span className="text-[10px] uppercase tracking-widest text-[#cba158] font-bold">
+            <div className="text-center pb-4 border-b border-stone-200">
+              <span className="text-[10px] uppercase tracking-widest text-[#996e1e] font-bold">
                 {order.locationName}
               </span>
-              <h2 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
+              <h2 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 mt-1">
                 How Was Your Experience?
               </h2>
-              <p className="text-xs text-stone-400 mt-1">
-                Order <strong className="font-mono text-white">#{order.displayNumber}</strong> · {order.customerName}
+              <p className="text-xs text-stone-500 mt-1">
+                Order <strong className="font-mono text-stone-900">#{order.displayNumber}</strong> · {order.customerName}
               </p>
             </div>
 
             {/* Overall Rating */}
-            <div className="bg-[#20161a] border border-stone-800 rounded-xl p-4 text-center space-y-2">
-              <span className="text-xs uppercase font-bold tracking-wider text-stone-300 block">
+            <div className="bg-[#faf8f5] border border-stone-200 rounded-2xl p-4 text-center space-y-2 shadow-xs">
+              <span className="text-xs uppercase font-bold tracking-wider text-stone-700 block">
                 Overall Experience Rating
               </span>
               <div className="flex justify-center">
                 {renderStars(overallRating, setOverallRating, 'w-8 h-8')}
               </div>
-              <span className="text-xs text-[#e6c989] font-medium block">
+              <span className="text-xs text-[#855e18] font-bold block">
                 {overallRating === 5 ? 'Exceptional · Nawabi Royalty' : overallRating === 4 ? 'Very Good' : overallRating === 3 ? 'Average' : overallRating === 2 ? 'Needs Improvement' : 'Poor'}
               </span>
             </div>
 
             {/* Split Ratings: Food & Service */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="p-3 bg-stone-900/60 border border-stone-800 rounded-xl space-y-1.5">
-                <span className="font-semibold text-stone-300 block">Food Flavor & Quality</span>
+              <div className="p-3 bg-[#faf8f5] border border-stone-200 rounded-xl space-y-1.5 shadow-xs">
+                <span className="font-bold text-stone-700 block">Food Flavor & Quality</span>
                 {renderStars(foodRating, setFoodRating, 'w-5 h-5')}
               </div>
-              <div className="p-3 bg-stone-900/60 border border-stone-800 rounded-xl space-y-1.5">
-                <span className="font-semibold text-stone-300 block">Service & Speed</span>
+              <div className="p-3 bg-[#faf8f5] border border-stone-200 rounded-xl space-y-1.5 shadow-xs">
+                <span className="font-bold text-stone-700 block">Service & Speed</span>
                 {renderStars(serviceRating, setServiceRating, 'w-5 h-5')}
               </div>
             </div>
 
             {/* Dish-by-Dish Rating Section */}
-            <div className="space-y-3 pt-2 border-t border-stone-800">
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#cba158]">
+            <div className="space-y-3 pt-2 border-t border-stone-200">
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#996e1e]">
                 <Utensils className="w-4 h-4" />
                 <span>Rate Your Ordered Dishes</span>
               </div>
@@ -198,10 +198,10 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
                   return (
                     <div
                       key={it.menuItemId}
-                      className="p-3 rounded-xl bg-[#22171b] border border-stone-800 space-y-2 text-xs"
+                      className="p-3 rounded-xl bg-[#faf8f5] border border-stone-200 space-y-2 text-xs"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                        <span className="font-serif font-bold text-white text-sm">
+                        <span className="font-serif font-bold text-stone-900 text-sm">
                           {it.name}
                         </span>
                         {renderStars(
@@ -216,7 +216,7 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
                         placeholder="Dish comment (e.g. tenderness, spice level, crispiness...)"
                         value={currentDishReview.comment}
                         onChange={(e) => handleDishCommentChange(it.menuItemId, e.target.value)}
-                        className="w-full px-2.5 py-1.5 bg-stone-900 border border-stone-800 rounded-lg text-xs text-white placeholder-stone-500 focus:outline-none focus:border-[#cba158]"
+                        className="w-full px-2.5 py-1.5 bg-white border border-stone-200 rounded-lg text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-[#cba158]"
                       />
                     </div>
                   );
@@ -225,9 +225,9 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
             </div>
 
             {/* General Feedback Comments */}
-            <div className="space-y-1.5 pt-2 border-t border-stone-800">
-              <label className="block text-xs font-semibold text-stone-300 flex items-center gap-1.5">
-                <MessageSquare className="w-3.5 h-3.5 text-[#cba158]" />
+            <div className="space-y-1.5 pt-2 border-t border-stone-200">
+              <label className="block text-xs font-bold text-stone-700 flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5 text-[#996e1e]" />
                 Additional Comments or Suggestions for the Chef
               </label>
               <textarea
@@ -235,12 +235,12 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Share your experience at SHANGRILLA..."
-                className="w-full px-3 py-2 bg-stone-900 border border-stone-800 rounded-xl text-xs text-white placeholder-stone-500 focus:outline-none focus:border-[#cba158]"
+                className="w-full px-3 py-2 bg-[#faf8f5] border border-stone-200 rounded-xl text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-[#cba158] focus:bg-white resize-none"
               />
             </div>
 
             {errorMsg && (
-              <p className="text-xs text-red-400 bg-red-950/40 border border-red-800 p-2 rounded-lg">
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 p-2.5 rounded-xl">
                 {errorMsg}
               </p>
             )}
@@ -250,14 +250,14 @@ export const CustomerFeedbackModal: React.FC<CustomerFeedbackModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs font-semibold rounded-xl transition-colors"
+                className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
               >
                 Skip
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2.5 bg-[#cba158] hover:bg-[#dfb872] disabled:opacity-50 text-[#140e11] font-bold text-xs rounded-xl transition-colors shadow-lg flex items-center gap-1.5"
+                className="px-6 py-2.5 bg-gradient-to-r from-[#cba158] to-[#dfb872] hover:shadow-lg hover:shadow-[#cba158]/25 disabled:opacity-50 text-stone-950 font-bold text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
               >
                 <ThumbsUp className="w-3.5 h-3.5" />
                 <span>{isSubmitting ? 'Submitting...' : 'Submit Feedback'}</span>

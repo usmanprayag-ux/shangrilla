@@ -50,7 +50,6 @@ import {
   EventBooking,
   EventStatus,
   EventType,
-  TableBooking,
   LoyaltyAccount,
   LoyaltySettings
 } from '../types/models';
@@ -68,7 +67,6 @@ interface AdminPanelProps {
 type AdminTab =
   | 'overview'
   | 'orders'
-  | 'table-bookings'
   | 'banquets'
   | 'loyalty'
   | 'menu'
@@ -100,9 +98,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ locations, onExit, onOpe
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [eventBookings, setEventBookings] = useState<EventBooking[]>([]);
-  const [tableBookings, setTableBookings] = useState<TableBooking[]>([]);
-  const [tableSearch, setTableSearch] = useState<string>('');
-  const [tableStatusFilter, setTableStatusFilter] = useState<string>('all');
   const [loyaltyAccounts, setLoyaltyAccounts] = useState<any[]>([]);
   const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettings | null>(null);
   const [websiteConfig, setWebsiteConfig] = useState<WebsiteConfig | null>(null);
@@ -166,7 +161,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ locations, onExit, onOpe
         couponsData,
         feedbackData,
         eventsData,
-        tablesData,
         loyaltyAccsData,
         loyaltySettingsData,
         webConfigData,
@@ -183,7 +177,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ locations, onExit, onOpe
         fetch('/api/coupons').then(r => r.json()).then(j => j.data || []),
         api.getFeedback({ locationId: selectedLocationId }),
         api.getEvents({ locationId: selectedLocationId }),
-        api.getTableBookings({ locationId: selectedLocationId }),
         api.getLoyaltyAccounts(),
         api.getLoyaltySettings(),
         api.getWebsiteConfig(),
@@ -201,7 +194,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ locations, onExit, onOpe
       setCoupons(couponsData || []);
       setFeedbacks(feedbackData || []);
       setEventBookings(eventsData || []);
-      setTableBookings(tablesData || []);
       setLoyaltyAccounts(loyaltyAccsData || []);
       setLoyaltySettings(loyaltySettingsData || null);
       setWebsiteConfig(webConfigData);
@@ -425,7 +417,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ locations, onExit, onOpe
           {[
             { id: 'overview', label: 'Overview & KPIs', icon: LayoutDashboard },
             { id: 'orders', label: 'Live Orders Queue', icon: Receipt },
-            { id: 'table-bookings', label: 'Table Reservations', icon: Calendar },
             { id: 'banquets', label: 'Banquets & Event Bookings', icon: PartyPopper },
             { id: 'loyalty', label: 'Royal Loyalty Program', icon: Crown },
             { id: 'menu', label: 'Menu & Dishes', icon: UtensilsCrossed },
@@ -671,216 +662,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ locations, onExit, onOpe
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
-          )}
-
-          {/* TAB: TABLE RESERVATIONS */}
-          {activeTab === 'table-bookings' && (
-            <div className="space-y-6">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-bold tracking-widest text-[#cba158]">
-                      TABLE MANAGEMENT
-                    </span>
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#cba158]/10 text-[#e5c179] border border-[#cba158]/30">
-                      LIVE RESERVATIONS
-                    </span>
-                  </div>
-                  <h3 className="font-serif font-bold text-xl text-white">
-                    Table Reservations & Seating
-                  </h3>
-                  <p className="text-xs text-stone-400">
-                    Manage guest table bookings, assign tables, and monitor arrival statuses across Restaurant and Dhaba.
-                  </p>
-                </div>
-              </div>
-
-              {/* Metrics */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="p-4 rounded-xl bg-[#181114] border border-stone-800">
-                  <span className="text-[10px] text-stone-400 uppercase tracking-wider block">Total Bookings</span>
-                  <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                    {tableBookings.length}
-                  </div>
-                  <span className="text-[10px] text-stone-500">Across both venues</span>
-                </div>
-
-                <div className="p-4 rounded-xl bg-[#181114] border border-stone-800">
-                  <span className="text-[10px] text-stone-400 uppercase tracking-wider block">Confirmed Tables</span>
-                  <div className="text-2xl font-bold font-mono text-[#e5c179] mt-0.5">
-                    {tableBookings.filter(t => t.status === 'CONFIRMED').length}
-                  </div>
-                  <span className="text-[10px] text-stone-500">Awaiting guest arrival</span>
-                </div>
-
-                <div className="p-4 rounded-xl bg-[#181114] border border-stone-800">
-                  <span className="text-[10px] text-stone-400 uppercase tracking-wider block">Currently Seated</span>
-                  <div className="text-2xl font-bold font-mono text-emerald-400 mt-0.5">
-                    {tableBookings.filter(t => t.status === 'SEATED').length}
-                  </div>
-                  <span className="text-[10px] text-stone-500">Dining in progress</span>
-                </div>
-
-                <div className="p-4 rounded-xl bg-[#181114] border border-stone-800">
-                  <span className="text-[10px] text-stone-400 uppercase tracking-wider block">Total Expected Guests</span>
-                  <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                    {tableBookings.reduce((sum, t) => sum + (t.guestCount || 0), 0)} <span className="text-xs font-sans text-stone-400">Pax</span>
-                  </div>
-                  <span className="text-[10px] text-stone-500">Reserved seating count</span>
-                </div>
-              </div>
-
-              {/* Toolbar */}
-              <div className="p-3.5 rounded-xl bg-[#181114] border border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="relative w-full sm:w-72">
-                  <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-stone-500" />
-                  <input
-                    type="text"
-                    placeholder="Search by name, phone or booking ref..."
-                    value={tableSearch}
-                    onChange={(e) => setTableSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 bg-stone-900 border border-stone-700 rounded-lg text-xs text-white focus:outline-none focus:border-[#cba158]"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="text-xs text-stone-400 whitespace-nowrap">Status:</span>
-                  <select
-                    value={tableStatusFilter}
-                    onChange={(e) => setTableStatusFilter(e.target.value)}
-                    className="px-3 py-1.5 bg-stone-900 border border-stone-700 rounded-lg text-xs text-white focus:outline-none focus:border-[#cba158]"
-                  >
-                    <option value="all">All Statuses</option>
-                    <option value="CONFIRMED">CONFIRMED</option>
-                    <option value="SEATED">SEATED</option>
-                    <option value="COMPLETED">COMPLETED</option>
-                    <option value="CANCELLED">CANCELLED</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Table List */}
-              <div className="bg-[#181114] border border-stone-800 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-[#1f171a] text-stone-400 uppercase tracking-wider text-[10px] border-b border-stone-800 font-mono">
-                      <tr>
-                        <th className="py-3 px-4">Ref & Date</th>
-                        <th className="py-3 px-4">Guest Info</th>
-                        <th className="py-3 px-4">Venue & Area</th>
-                        <th className="py-3 px-4">Guests</th>
-                        <th className="py-3 px-4">Assigned Table</th>
-                        <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-stone-800/60 text-stone-300">
-                      {tableBookings
-                        .filter(t => {
-                          const matchesStatus = tableStatusFilter === 'all' || t.status === tableStatusFilter;
-                          const matchesSearch = !tableSearch ||
-                            t.bookingRef.toLowerCase().includes(tableSearch.toLowerCase()) ||
-                            t.customerName.toLowerCase().includes(tableSearch.toLowerCase()) ||
-                            t.customerPhone.includes(tableSearch);
-                          return matchesStatus && matchesSearch;
-                        })
-                        .map(booking => (
-                          <tr key={booking.id} className="hover:bg-stone-900/40 transition-colors">
-                            <td className="py-3.5 px-4 font-mono">
-                              <span className="text-[#f5d78e] font-bold block">{booking.bookingRef}</span>
-                              <span className="text-stone-400 text-[11px] block">{booking.date} · {booking.timeSlot}</span>
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span className="font-semibold text-white block">{booking.customerName}</span>
-                              <span className="text-stone-400 text-[11px] font-mono">{booking.customerPhone}</span>
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span className="text-xs text-stone-200 block font-medium">{booking.locationName.split(' ')[0]}</span>
-                              <span className="text-[10px] text-[#e5a83b] block">{booking.seatingArea}</span>
-                            </td>
-                            <td className="py-3.5 px-4 font-mono font-bold text-white">
-                              {booking.guestCount} Guests
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-stone-200 text-[11px]">
-                                  {booking.tableAssigned || 'Unassigned'}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    const newTbl = prompt(`Assign table number for ${booking.customerName}:`, booking.tableAssigned || 'T-');
-                                    if (newTbl !== null) {
-                                      const updated = await api.updateTableBooking(booking.id, { tableAssigned: newTbl.trim() });
-                                      setTableBookings(prev => prev.map(b => b.id === updated.id ? updated : b));
-                                    }
-                                  }}
-                                  className="text-[10px] text-[#cba158] hover:underline"
-                                >
-                                  Edit
-                                </button>
-                              </div>
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                booking.status === 'CONFIRMED'
-                                  ? 'bg-[#cba158]/20 text-[#f5d78e] border border-[#cba158]/40'
-                                  : booking.status === 'SEATED'
-                                  ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-800'
-                                  : booking.status === 'COMPLETED'
-                                  ? 'bg-stone-800 text-stone-400'
-                                  : 'bg-red-950/40 text-red-300 border border-red-800'
-                              }`}>
-                                {booking.status}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 text-right">
-                              <div className="flex items-center justify-end gap-1.5">
-                                {booking.status === 'CONFIRMED' && (
-                                  <button
-                                    onClick={async () => {
-                                      const updated = await api.updateTableBooking(booking.id, { status: 'SEATED' });
-                                      setTableBookings(prev => prev.map(b => b.id === updated.id ? updated : b));
-                                    }}
-                                    className="px-2 py-1 bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 rounded text-[11px] font-semibold transition-colors"
-                                  >
-                                    Seat Guest
-                                  </button>
-                                )}
-                                {booking.status === 'SEATED' && (
-                                  <button
-                                    onClick={async () => {
-                                      const updated = await api.updateTableBooking(booking.id, { status: 'COMPLETED' });
-                                      setTableBookings(prev => prev.map(b => b.id === updated.id ? updated : b));
-                                    }}
-                                    className="px-2 py-1 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded text-[11px] transition-colors"
-                                  >
-                                    Complete
-                                  </button>
-                                )}
-                                {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
-                                  <button
-                                    onClick={async () => {
-                                      if (confirm(`Cancel reservation for ${booking.customerName}?`)) {
-                                        const updated = await api.updateTableBooking(booking.id, { status: 'CANCELLED' });
-                                        setTableBookings(prev => prev.map(b => b.id === updated.id ? updated : b));
-                                      }
-                                    }}
-                                    className="px-2 py-1 bg-red-950/40 hover:bg-red-900/60 text-red-400 rounded text-[11px] transition-colors"
-                                  >
-                                    Cancel
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             </div>
           )}

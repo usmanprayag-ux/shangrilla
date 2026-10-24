@@ -1,4 +1,4 @@
-import { Location, MenuItem, Order, WebsiteConfig, KitchenStatus, PaymentStatus, EventBooking, EventStatus, TableBooking, TableBookingStatus, LoyaltyAccount, LoyaltySettings, MemberProfile } from '../types/models';
+import { Location, MenuItem, Order, WebsiteConfig, KitchenStatus, PaymentStatus, EventBooking, EventStatus, LoyaltyAccount, LoyaltySettings, MemberProfile } from '../types/models';
 
 type SSEListener = (event: { type: string; data: any }) => void;
 
@@ -445,40 +445,6 @@ class ApiClient {
     return json.data;
   }
 
-  // --- Table Bookings / Reservations ---
-  public async getTableBookings(params?: { locationId?: string; status?: string; date?: string }): Promise<TableBooking[]> {
-    const query = new URLSearchParams();
-    if (params?.locationId) query.set('locationId', params.locationId);
-    if (params?.status) query.set('status', params.status);
-    if (params?.date) query.set('date', params.date);
-
-    const res = await fetch(`/api/table-bookings?${query.toString()}`);
-    const json = await res.json();
-    return json.data || [];
-  }
-
-  public async createTableBooking(booking: Partial<TableBooking>): Promise<TableBooking> {
-    const res = await fetch('/api/table-bookings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(booking)
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error || 'Failed to submit table booking');
-    return json.data;
-  }
-
-  public async updateTableBooking(id: string, updates: Partial<TableBooking>): Promise<TableBooking> {
-    const res = await fetch(`/api/table-bookings/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error || 'Failed to update table booking');
-    return json.data;
-  }
-
   // --- Member Registration ---
   public async registerMember(profile: MemberProfile): Promise<any> {
     const res = await fetch('/api/members/register', {
@@ -506,6 +472,22 @@ class ApiClient {
     const json = await res.json();
     if (!json.success) throw new Error(json.error || 'Invalid credentials');
     return json;
+  }
+
+  // --- Gemini Chatbot Concierge ---
+  public async sendChatMessage(
+    message: string,
+    history: Array<{ role: 'user' | 'model'; content: string }> = [],
+    locationId?: string
+  ): Promise<{ reply: string; suggestedDishes?: MenuItem[]; offerCode?: string }> {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, history, locationId })
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Chat request failed');
+    return json.data;
   }
 }
 

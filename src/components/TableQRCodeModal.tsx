@@ -58,49 +58,49 @@ export const TableQRCodeModal: React.FC<TableQRCodeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-md bg-[#181214] border border-[#cba158]/30 rounded-2xl p-6 text-stone-100 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-md bg-white border border-stone-200 rounded-2xl p-6 text-stone-800 shadow-2xl animate-modal-pop">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800 transition-colors"
+          className="absolute top-4 right-4 p-2 text-stone-400 hover:text-stone-800 rounded-lg hover:bg-stone-100 transition-colors cursor-pointer"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="text-center mb-6">
-          <span className="text-xs uppercase tracking-widest text-[#cba158] font-semibold">
+          <span className="text-xs uppercase tracking-widest text-[#996e1e] font-bold">
             {location.name}
           </span>
-          <h3 className="text-2xl font-serif font-bold text-white mt-1">
+          <h3 className="text-2xl font-serif font-bold text-stone-900 mt-1">
             {tableNumber} QR Ordering
           </h3>
-          <p className="text-xs text-stone-400 mt-1">
+          <p className="text-xs text-stone-500 mt-1">
             Guests scan this QR to automatically order from {tableNumber}
           </p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl flex flex-col items-center justify-center shadow-inner mx-auto max-w-[280px]">
+        <div className="bg-[#faf8f5] border border-stone-200 p-6 rounded-2xl flex flex-col items-center justify-center shadow-xs mx-auto max-w-[280px]">
           {qrDataUrl ? (
-            <img src={qrDataUrl} alt={`${tableNumber} QR Code`} className="w-56 h-56 object-contain" />
+            <img src={qrDataUrl} alt={`${tableNumber} QR Code`} className="w-56 h-56 object-contain rounded-lg shadow-xs" />
           ) : (
-            <div className="w-56 h-56 flex items-center justify-center text-stone-500 text-sm">
+            <div className="w-56 h-56 flex items-center justify-center text-stone-400 text-sm">
               Generating QR...
             </div>
           )}
-          <span className="mt-2 text-[11px] font-mono font-medium text-stone-800 uppercase tracking-wider">
+          <span className="mt-3 text-[11px] font-mono font-bold text-stone-700 uppercase tracking-wider">
             SHANGRILLA · {tableNumber.toUpperCase()}
           </span>
         </div>
 
         <div className="mt-6 flex flex-col gap-2">
-          <div className="flex items-center gap-2 bg-stone-900/80 border border-stone-800 rounded-lg p-2.5 text-xs text-stone-300">
-            <span className="truncate flex-1 font-mono text-[11px] text-stone-400">{targetUrl}</span>
+          <div className="flex items-center gap-2 bg-[#faf8f5] border border-stone-200 rounded-xl p-2.5 text-xs text-stone-700">
+            <span className="truncate flex-1 font-mono text-[11px] text-stone-600">{targetUrl}</span>
             <button
               onClick={handleCopy}
-              className="px-2.5 py-1 bg-[#cba158]/20 hover:bg-[#cba158]/30 text-[#e6c989] rounded text-[11px] font-medium transition-colors flex items-center gap-1 shrink-0"
+              className="px-2.5 py-1 bg-[#cba158]/20 hover:bg-[#cba158]/30 text-[#855e18] rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : null}
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : null}
               {copied ? 'Copied' : 'Copy Link'}
             </button>
           </div>
@@ -108,14 +108,14 @@ export const TableQRCodeModal: React.FC<TableQRCodeModalProps> = ({
           <div className="grid grid-cols-2 gap-2 mt-2">
             <button
               onClick={handleDownload}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-medium rounded-lg transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold rounded-xl transition-colors cursor-pointer"
             >
-              <Download className="w-4 h-4 text-[#cba158]" />
+              <Download className="w-4 h-4 text-[#996e1e]" />
               Download PNG
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#cba158] hover:bg-[#dfb872] text-[#1c1518] text-xs font-semibold rounded-lg transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#cba158] to-[#dfb872] hover:shadow-md text-stone-950 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
             >
               <Printer className="w-4 h-4" />
               Print Tent Card
@@ -128,7 +128,7 @@ export const TableQRCodeModal: React.FC<TableQRCodeModalProps> = ({
                 onSelectTableUrl(targetUrl);
                 onClose();
               }}
-              className="mt-1 flex items-center justify-center gap-1.5 text-xs text-[#cba158] hover:underline"
+              className="mt-1 flex items-center justify-center gap-1.5 text-xs text-[#996e1e] hover:underline font-bold cursor-pointer"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               Test Customer Ordering as this Table

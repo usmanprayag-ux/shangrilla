@@ -2,21 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   Crown,
-  Sparkles,
-  Award,
-  Gift,
   Coins,
   History,
-  TrendingUp,
   Search,
   Phone,
   CheckCircle,
-  ArrowRight,
-  ShieldAlert,
-  ChevronRight,
-  Star
+  ArrowRight
 } from 'lucide-react';
-import { LoyaltyAccount, LoyaltySettings, LoyaltyTier } from '../types/models';
+import { LoyaltySettings } from '../types/models';
 import { api } from '../services/api';
 
 interface LoyaltyModalProps {
@@ -37,7 +30,6 @@ export const LoyaltyModal: React.FC<LoyaltyModalProps> = ({
   const [settings, setSettings] = useState<LoyaltySettings | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<string>('');
-  const [pointsToRedeemInput, setPointsToRedeemInput] = useState<number>(50);
 
   useEffect(() => {
     if (isOpen) {
@@ -75,9 +67,6 @@ export const LoyaltyModal: React.FC<LoyaltyModalProps> = ({
       if (data && data.phone) {
         localStorage.setItem('shangrilla_customer_phone', data.phone);
       }
-      if (data.points) {
-        setPointsToRedeemInput(Math.min(data.points, 100));
-      }
     } catch (err: any) {
       setSearchError(err.message || 'Could not find account.');
     } finally {
@@ -113,56 +102,57 @@ export const LoyaltyModal: React.FC<LoyaltyModalProps> = ({
   const amountNeededForNext = currentTierMeta.next ? Math.max(0, currentTierMeta.nextMin - totalSpent) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-3xl my-auto bg-[#171415] border border-[#cba158]/30 rounded-2xl shadow-2xl overflow-hidden text-[#f5efe6]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-md overflow-y-auto animate-apple-backdrop">
+      <div className="fixed inset-0" onClick={onClose} />
+      <div className="relative w-full max-w-3xl my-auto bg-white border border-stone-200/90 rounded-3xl shadow-[0_25px_65px_rgba(0,0,0,0.22)] overflow-hidden text-stone-800 animate-apple-modal z-10">
         {/* Header Bar */}
-        <div className="px-6 py-5 bg-gradient-to-r from-[#221c1d] via-[#2d2325] to-[#221c1d] border-b border-[#cba158]/20 flex items-center justify-between">
+        <div className="px-6 py-5 bg-gradient-to-r from-[#faf8f5] via-white to-[#faf8f5] border-b border-stone-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#cba158] to-[#9f7d37] flex items-center justify-center text-black shadow-md shadow-[#cba158]/20">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#cba158] to-[#9f7d37] flex items-center justify-center text-white shadow-sm">
               <Crown className="w-5 h-5 fill-current" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] tracking-[0.25em] uppercase text-[#cba158] font-bold">
+                <span className="text-[10px] tracking-[0.2em] uppercase text-[#996e1e] font-bold">
                   Loyalty & Dining Rewards
                 </span>
-                <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#cba158]/10 text-[#e5c179] border border-[#cba158]/30 font-semibold">
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#cba158]/15 text-[#855e18] border border-[#cba158]/25 font-bold">
                   SHANGRILLA CLUB
                 </span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#fdfbf7] font-['Oswald',sans-serif] uppercase">
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-stone-900 font-['Oswald',sans-serif] uppercase">
                 Royal Rewards Portal
               </h2>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-[#9f9188] hover:text-white hover:bg-white/10 transition-colors"
+            className="p-2 rounded-xl text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition-all apple-press cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6 max-h-[82vh] overflow-y-auto">
+        <div className="p-6 space-y-6 max-h-[82vh] overflow-y-auto bg-white">
           {/* Phone Lookup Form */}
           <form onSubmit={handleSearchSubmit} className="relative flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
-              <Phone className="absolute left-3.5 top-3 w-4 h-4 text-[#8e8178]" />
+              <Phone className="absolute left-3.5 top-3 w-4 h-4 text-stone-400" />
               <input
                 type="tel"
                 placeholder="Enter mobile number to view balance (e.g., 9839012345)"
                 value={phoneInput}
                 onChange={(e) => setPhoneInput(e.target.value)}
-                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[#201a1b] border border-white/15 focus:border-[#cba158] focus:ring-1 focus:ring-[#cba158] text-white text-xs outline-none"
+                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[#faf8f5] border border-stone-200 focus:border-[#cba158] focus:bg-white text-stone-900 text-xs font-medium outline-none transition-colors"
               />
             </div>
             <button
               type="submit"
               disabled={isLoading}
-              className="px-5 py-2.5 rounded-xl bg-[#cba158] hover:bg-[#d8b067] text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#cba158] to-[#dfb872] hover:shadow-lg hover:shadow-[#cba158]/25 text-stone-950 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0 shadow-xs"
             >
               {isLoading ? (
-                <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                <div className="w-3.5 h-3.5 border-2 border-stone-900 border-t-transparent rounded-full animate-spin" />
               ) : (
                 <Search className="w-3.5 h-3.5" />
               )}
@@ -171,35 +161,35 @@ export const LoyaltyModal: React.FC<LoyaltyModalProps> = ({
           </form>
 
           {searchError && (
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
               {searchError}
             </div>
           )}
 
           {/* Account Balance Card */}
           {account && (
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-[#241d1e] via-[#2a2224] to-[#1c1718] border border-[#cba158]/35 shadow-lg space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-[#fdfbf7] via-white to-[#f7f1e4] border border-[#cba158]/40 shadow-md space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-200">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-[#baa99b]">Member:</span>
-                    <strong className="text-white text-sm font-semibold">{account.customerName}</strong>
-                    <span className="text-xs text-[#8e8178]">({account.phone})</span>
+                    <span className="text-xs text-stone-500">Member:</span>
+                    <strong className="text-stone-900 text-sm font-bold">{account.customerName}</strong>
+                    <span className="text-xs text-stone-500">({account.phone})</span>
                   </div>
-                  <div className="text-[11px] text-[#baa99b] mt-0.5">
-                    Total Lifetime Spend: <strong className="text-white">₹{account.totalSpent?.toLocaleString('en-IN') || 0}</strong> across {account.totalOrdersCount || 0} orders
+                  <div className="text-[11px] text-stone-600 mt-0.5">
+                    Total Lifetime Spend: <strong className="text-stone-900">₹{account.totalSpent?.toLocaleString('en-IN') || 0}</strong> across {account.totalOrdersCount || 0} orders
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 self-start sm:self-auto">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border flex items-center gap-1.5 ${
                     currentTier === 'SHAHI_ROYAL'
-                      ? 'bg-purple-900/40 border-purple-400 text-purple-200'
+                      ? 'bg-purple-100 border-purple-300 text-purple-900'
                       : currentTier === 'GOLD'
-                      ? 'bg-amber-900/40 border-amber-400 text-amber-200'
+                      ? 'bg-amber-100 border-amber-300 text-amber-900'
                       : currentTier === 'SILVER'
-                      ? 'bg-slate-800 border-slate-300 text-slate-100'
-                      : 'bg-[#2b2223] border-[#cba158]/40 text-[#e5c179]'
+                      ? 'bg-slate-100 border-slate-300 text-slate-800'
+                      : 'bg-[#cba158]/15 border-[#cba158]/40 text-[#855e18]'
                   }`}>
                     <Crown className="w-3 h-3" />
                     {account.tierLabel || currentTier}
@@ -209,28 +199,28 @@ export const LoyaltyModal: React.FC<LoyaltyModalProps> = ({
 
               {/* Points Highlights */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3.5 rounded-xl bg-black/30 border border-white/5">
-                  <span className="text-[10px] text-[#8e8178] uppercase tracking-wider block">Available Points</span>
-                  <div className="text-2xl font-bold font-mono text-[#e5c179] mt-0.5 flex items-center gap-1.5">
-                    <Coins className="w-5 h-5 text-[#cba158]" />
-                    {points} <span className="text-xs font-sans text-[#baa99b]">pts</span>
+                <div className="p-3.5 rounded-xl bg-white border border-stone-200 shadow-xs">
+                  <span className="text-[10px] text-stone-500 uppercase tracking-wider font-semibold block">Available Points</span>
+                  <div className="text-2xl font-bold font-mono text-[#855e18] mt-0.5 flex items-center gap-1.5">
+                    <Coins className="w-5 h-5 text-[#996e1e]" />
+                    {points} <span className="text-xs font-sans text-stone-500 font-normal">pts</span>
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-black/30 border border-white/5">
-                  <span className="text-[10px] text-[#8e8178] uppercase tracking-wider block">Redeemable Value</span>
-                  <div className="text-2xl font-bold font-mono text-emerald-400 mt-0.5">
+                <div className="p-3.5 rounded-xl bg-white border border-stone-200 shadow-xs">
+                  <span className="text-[10px] text-stone-500 uppercase tracking-wider font-semibold block">Redeemable Value</span>
+                  <div className="text-2xl font-bold font-mono text-emerald-700 mt-0.5">
                     ₹{rupeeWorth.toLocaleString('en-IN')}
                   </div>
-                  <span className="text-[9px] text-[#8e8178]">1 Point = ₹{rupeeValuePerPoint.toFixed(2)} discount</span>
+                  <span className="text-[9px] text-stone-500">1 Point = ₹{rupeeValuePerPoint.toFixed(2)} discount</span>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-black/30 border border-white/5">
-                  <span className="text-[10px] text-[#8e8178] uppercase tracking-wider block">Reward Earn Rate</span>
-                  <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                <div className="p-3.5 rounded-xl bg-white border border-stone-200 shadow-xs">
+                  <span className="text-[10px] text-stone-500 uppercase tracking-wider font-semibold block">Reward Earn Rate</span>
+                  <div className="text-2xl font-bold font-mono text-stone-900 mt-0.5">
                     {Math.round((settings?.earnRatePercent || 5) * (account.tierMultiplier || 1.0) * 10) / 10}%
                   </div>
-                  <span className="text-[9px] text-[#8e8178]">({account.tierMultiplier || 1.0}x Tier Multiplier)</span>
+                  <span className="text-[9px] text-stone-500">({account.tierMultiplier || 1.0}x Tier Multiplier)</span>
                 </div>
               </div>
 
@@ -238,13 +228,13 @@ export const LoyaltyModal: React.FC<LoyaltyModalProps> = ({
               {currentTierMeta.next && (
                 <div className="space-y-1.5 pt-1">
                   <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-[#a89b91]">
-                      Spend <strong className="text-[#e5c179]">₹{amountNeededForNext.toLocaleString('en-IN')}</strong> more to reach{' '}
-                      <strong className="text-white">{currentTierMeta.next.replace('_', ' ')}</strong>
+                    <span className="text-stone-600">
+                      Spend <strong className="text-[#855e18]">₹{amountNeededForNext.toLocaleString('en-IN')}</strong> more to reach{' '}
+                      <strong className="text-stone-900">{currentTierMeta.next.replace('_', ' ')}</strong>
                     </span>
-                    <span className="font-mono text-[#baa99b]">{progressPercent}%</span>
+                    <span className="font-mono font-bold text-stone-700">{progressPercent}%</span>
                   </div>
-                  <div className="w-full h-2 rounded-full bg-black/50 overflow-hidden border border-white/10">
+                  <div className="w-full h-2 rounded-full bg-stone-200 overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-[#cba158] to-[#f4d187] rounded-full transition-all duration-500"
                       style={{ width: `${progressPercent}%` }}
@@ -255,17 +245,17 @@ export const LoyaltyModal: React.FC<LoyaltyModalProps> = ({
 
               {/* Quick Redeem CTA if points are available and callback provided */}
               {points >= (settings?.minPointsToRedeem || 50) && onSelectRedeem && (
-                <div className="p-3 rounded-xl bg-[#cba158]/10 border border-[#cba158]/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="p-3.5 rounded-xl bg-[#cba158]/10 border border-[#cba158]/35 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="text-xs">
-                    <span className="font-semibold text-white">Apply your points at checkout?</span>
-                    <p className="text-[11px] text-[#baa99b]">Redeem {points} points for an instant ₹{rupeeWorth} off your meal.</p>
+                    <span className="font-bold text-stone-900">Apply your points at checkout?</span>
+                    <p className="text-[11px] text-stone-600">Redeem {points} points for an instant ₹{rupeeWorth} off your meal.</p>
                   </div>
                   <button
                     onClick={() => {
                       onSelectRedeem(points, rupeeWorth);
                       onClose();
                     }}
-                    className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#cba158] hover:bg-[#d8b067] text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap shadow-md"
+                    className="w-full sm:w-auto px-4 py-2 rounded-lg bg-gradient-to-r from-[#cba158] to-[#dfb872] hover:shadow-md text-stone-950 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all whitespace-nowrap shadow-xs cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
                   >
                     Apply ₹{rupeeWorth} Off Now
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -278,10 +268,10 @@ export const LoyaltyModal: React.FC<LoyaltyModalProps> = ({
           {/* Tier Overview Cards */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-wider text-[#cba158] font-bold">
+              <span className="text-xs uppercase tracking-wider text-[#996e1e] font-bold">
                 Royal Tiers & Exclusive Perks
               </span>
-              <span className="text-[10px] text-[#8e8178]">Points earned on every meal automatically</span>
+              <span className="text-[10px] text-stone-500 font-medium">Points earned on every meal automatically</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -290,30 +280,30 @@ export const LoyaltyModal: React.FC<LoyaltyModalProps> = ({
                 return (
                   <div
                     key={t.name}
-                    className={`p-4 rounded-xl border transition-all ${
+                    className={`p-4 rounded-xl border transition-all transform hover:-translate-y-0.5 ${
                       isCurrent
-                        ? 'bg-[#cba158]/15 border-[#cba158] ring-1 ring-[#cba158]'
-                        : 'bg-[#1e191a] border-white/10'
+                        ? 'bg-[#cba158]/10 border-[#cba158] shadow-sm ring-1 ring-[#cba158]'
+                        : 'bg-[#faf8f5] border-stone-200 hover:border-stone-300'
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
-                        <Crown className={`w-4 h-4 ${isCurrent ? 'text-[#cba158]' : 'text-[#8e8178]'}`} />
-                        <h4 className="font-bold text-xs text-white">{t.label}</h4>
+                        <Crown className={`w-4 h-4 ${isCurrent ? 'text-[#996e1e]' : 'text-stone-400'}`} />
+                        <h4 className="font-bold text-xs text-stone-900">{t.label}</h4>
                       </div>
-                      <span className="text-[10px] font-mono text-[#cba158] bg-[#cba158]/10 px-2 py-0.5 rounded border border-[#cba158]/20">
+                      <span className="text-[10px] font-mono font-bold text-[#855e18] bg-[#cba158]/15 px-2 py-0.5 rounded border border-[#cba158]/30">
                         {t.multiplier}x Points
                       </span>
                     </div>
 
-                    <div className="text-[10px] text-[#8e8178] mb-2.5">
+                    <div className="text-[10px] text-stone-500 mb-2.5">
                       {t.minSpent === 0 ? 'Free on First Order' : `Min. Spend: ₹${t.minSpent.toLocaleString('en-IN')}`}
                     </div>
 
-                    <ul className="text-[11px] text-[#baa99b] space-y-1">
+                    <ul className="text-[11px] text-stone-600 space-y-1">
                       {t.perks.map((perk, i) => (
                         <li key={i} className="flex items-start gap-1.5">
-                          <CheckCircle className="w-3 h-3 text-[#cba158] mt-0.5 shrink-0" />
+                          <CheckCircle className="w-3 h-3 text-[#996e1e] mt-0.5 shrink-0" />
                           <span>{perk}</span>
                         </li>
                       ))}
@@ -327,19 +317,19 @@ export const LoyaltyModal: React.FC<LoyaltyModalProps> = ({
           {/* Account History (if loaded) */}
           {account && account.history && account.history.length > 0 && (
             <div className="space-y-2.5 pt-2">
-              <span className="text-xs uppercase tracking-wider text-[#cba158] font-bold flex items-center gap-1.5">
+              <span className="text-xs uppercase tracking-wider text-[#996e1e] font-bold flex items-center gap-1.5">
                 <History className="w-3.5 h-3.5" />
                 Recent Points Activity
               </span>
 
-              <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-[#1b1718] overflow-hidden">
+              <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-[#faf8f5] overflow-hidden">
                 {account.history.slice(0, 5).map((h: any, idx: number) => {
                   const isPositive = h.pointsChange > 0;
                   return (
                     <div key={idx} className="p-3 flex items-center justify-between text-xs">
                       <div>
-                        <div className="font-medium text-white">{h.reason}</div>
-                        <div className="text-[10px] text-[#8e8178]">
+                        <div className="font-semibold text-stone-900">{h.reason}</div>
+                        <div className="text-[10px] text-stone-500">
                           {new Date(h.timestamp).toLocaleDateString('en-IN', {
                             day: 'numeric',
                             month: 'short',
@@ -349,7 +339,7 @@ export const LoyaltyModal: React.FC<LoyaltyModalProps> = ({
                           })}
                         </div>
                       </div>
-                      <div className={`font-mono font-bold text-sm ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      <div className={`font-mono font-bold text-sm ${isPositive ? 'text-emerald-700' : 'text-rose-600'}`}>
                         {isPositive ? `+${h.pointsChange}` : h.pointsChange} pts
                       </div>
                     </div>
@@ -360,8 +350,8 @@ export const LoyaltyModal: React.FC<LoyaltyModalProps> = ({
           )}
 
           {/* Information & Rules Footnote */}
-          <div className="p-3.5 rounded-xl bg-[#201a1b] border border-white/5 text-[11px] text-[#8e8178] space-y-1">
-            <p className="font-semibold text-[#baa99b]">Program Details & Terms:</p>
+          <div className="p-3.5 rounded-xl bg-[#faf8f5] border border-stone-200 text-[11px] text-stone-500 space-y-1">
+            <p className="font-bold text-stone-700">Program Details & Terms:</p>
             <p>• Royal Points can be redeemed against up to 50% of your food subtotal at both Hazratganj Royal Restaurant and Highway Express Dhaba.</p>
             <p>• Points are linked with your 10-digit mobile number and never expire as long as you visit once every 12 months.</p>
           </div>

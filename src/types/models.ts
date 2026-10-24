@@ -331,27 +331,6 @@ export interface EventBooking {
   updatedAt: string;
 }
 
-export type TableBookingStatus = 'CONFIRMED' | 'SEATED' | 'COMPLETED' | 'CANCELLED';
-
-export interface TableBooking {
-  id: string;
-  bookingRef: string; // e.g. TBL-2026-101
-  customerName: string;
-  customerPhone: string;
-  customerEmail?: string;
-  locationId: string;
-  locationName: string;
-  date: string; // YYYY-MM-DD
-  timeSlot: string; // e.g. '19:30'
-  guestCount: number;
-  seatingArea: string; // 'AC Royal Darbar Hall' | 'Highway Charpai Lawn' | 'Open Sky Terrace' | 'Family VIP Cabin'
-  specialRequests?: string;
-  status: TableBookingStatus;
-  tableAssigned?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface MemberProfile {
   name: string;
   phone: string;

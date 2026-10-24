@@ -16,7 +16,6 @@ import {
   AuditLog,
   CustomerFeedback,
   EventBooking,
-  TableBooking,
   LoyaltySettings
 } from '../src/types/models';
 
@@ -35,7 +34,6 @@ export interface DatabaseSchema {
   loyaltyAccounts: LoyaltyAccount[];
   loyaltySettings: LoyaltySettings;
   eventBookings: EventBooking[];
-  tableBookings: TableBooking[];
   websiteConfig: WebsiteConfig;
   auditLogs: AuditLog[];
   feedbacks: CustomerFeedback[];
@@ -470,6 +468,28 @@ const initialCoupons: Coupon[] = [
     usageLimit: 1000,
     timesUsed: 64,
     isActive: true
+  },
+  {
+    code: 'ROYAL3K',
+    discountType: 'PERCENT',
+    discountValue: 5,
+    minOrderValue: 3000,
+    maxDiscount: 1000,
+    validUntil: '2027-12-31',
+    usageLimit: 2000,
+    timesUsed: 12,
+    isActive: true
+  },
+  {
+    code: 'FEAST5',
+    discountType: 'PERCENT',
+    discountValue: 5,
+    minOrderValue: 3000,
+    maxDiscount: 1000,
+    validUntil: '2027-12-31',
+    usageLimit: 2000,
+    timesUsed: 18,
+    isActive: true
   }
 ];
 
@@ -698,45 +718,6 @@ const initialEventBookings: EventBooking[] = [
   }
 ];
 
-export const initialTableBookings: TableBooking[] = [
-  {
-    id: 'tbl-book-101',
-    bookingRef: 'TBL-2026-101',
-    customerName: 'Adil Tabassum',
-    customerPhone: '+91 98390 12345',
-    customerEmail: 'adil.tabassum@gmail.com',
-    locationId: 'shangrilla-hazratganj',
-    locationName: 'Shangrilla Fine Dining Restaurant & Darbar Hall (Hazratganj)',
-    date: new Date().toISOString().split('T')[0],
-    timeSlot: '19:30',
-    guestCount: 4,
-    seatingArea: 'AC Royal Darbar Hall',
-    specialRequests: 'Window side table, celebrating family dinner with Awadhi Dum Biryani.',
-    status: 'CONFIRMED',
-    tableAssigned: 'T-04',
-    createdAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'tbl-book-102',
-    bookingRef: 'TBL-2026-102',
-    customerName: 'Vikram Singh Chauhan',
-    customerPhone: '+91 94150 88214',
-    customerEmail: 'vikram.singh@outlook.com',
-    locationId: 'shangrilla-highway-dhaba',
-    locationName: 'Shangrilla 24/7 Highway Express Dhaba & Grand Lawns (NH-27)',
-    date: new Date().toISOString().split('T')[0],
-    timeSlot: '21:00',
-    guestCount: 6,
-    seatingArea: 'Highway Charpai Lawn Under the Stars',
-    specialRequests: 'Traditional charpai near live tandoor, extra kulhad chai after meal.',
-    status: 'CONFIRMED',
-    tableAssigned: 'CH-08',
-    createdAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString()
-  }
-];
-
 class DatabaseStore {
   private data: DatabaseSchema;
   private saveTimeout: NodeJS.Timeout | null = null;
@@ -755,7 +736,6 @@ class DatabaseStore {
         const parsed = JSON.parse(raw);
         if (!parsed.feedbacks) parsed.feedbacks = [];
         if (!parsed.eventBookings) parsed.eventBookings = initialEventBookings;
-        if (!parsed.tableBookings) parsed.tableBookings = initialTableBookings;
         if (!parsed.loyaltySettings) parsed.loyaltySettings = initialLoyaltySettings;
         if (!parsed.loyaltyAccounts) parsed.loyaltyAccounts = [];
         
@@ -766,6 +746,34 @@ class DatabaseStore {
           }
           return acc;
         });
+
+        // Ensure ROYAL3K coupon exists
+        if (parsed.coupons && !parsed.coupons.some((c: any) => c.code === 'ROYAL3K')) {
+          parsed.coupons.push({
+            code: 'ROYAL3K',
+            discountType: 'PERCENT',
+            discountValue: 5,
+            minOrderValue: 3000,
+            maxDiscount: 1000,
+            validUntil: '2027-12-31',
+            usageLimit: 2000,
+            timesUsed: 12,
+            isActive: true
+          });
+        }
+        if (parsed.coupons && !parsed.coupons.some((c: any) => c.code === 'FEAST5')) {
+          parsed.coupons.push({
+            code: 'FEAST5',
+            discountType: 'PERCENT',
+            discountValue: 5,
+            minOrderValue: 3000,
+            maxDiscount: 1000,
+            validUntil: '2027-12-31',
+            usageLimit: 2000,
+            timesUsed: 18,
+            isActive: true
+          });
+        }
 
         return parsed;
       }
@@ -863,7 +871,6 @@ class DatabaseStore {
       ],
       loyaltySettings: initialLoyaltySettings,
       eventBookings: initialEventBookings,
-      tableBookings: initialTableBookings,
       websiteConfig: initialWebsiteConfig,
       auditLogs: [
         {

@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { db } from './db';
 import { OrderService } from './orderService';
-import { Order, KitchenStatus, PaymentStatus, StockMovement, MenuItem, EventBooking, EventStatus, TableBooking, TableBookingStatus, LoyaltyAccount, LoyaltySettings, MemberProfile } from '../src/types/models';
+import { Order, KitchenStatus, PaymentStatus, StockMovement, MenuItem, EventBooking, EventStatus, LoyaltyAccount, LoyaltySettings, MemberProfile } from '../src/types/models';
+import { GeminiChatService } from './geminiChatService';
 
 export const apiRouter = Router();
 
@@ -1281,125 +1282,6 @@ apiRouter.post('/loyalty/adjust', (req: Request, res: Response) => {
 });
 
 // ----------------------------------------------------
-// Table Reservations / Bookings
-// ----------------------------------------------------
-apiRouter.get('/table-bookings', (req: Request, res: Response) => {
-  const { locationId, status, date } = req.query;
-  let bookings = db.get('tableBookings') || [];
-
-  if (locationId && locationId !== 'all') {
-    bookings = bookings.filter(b => b.locationId === locationId);
-  }
-  if (status && status !== 'ALL') {
-    bookings = bookings.filter(b => b.status === status);
-  }
-  if (date) {
-    bookings = bookings.filter(b => b.date === date);
-  }
-
-  // Sort newest first
-  bookings = [...bookings].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  res.json({ success: true, data: bookings });
-});
-
-apiRouter.post('/table-bookings', (req: Request, res: Response) => {
-  const {
-    customerName,
-    customerPhone,
-    customerEmail,
-    locationId,
-    locationName,
-    date,
-    timeSlot,
-    guestCount,
-    seatingArea,
-    specialRequests
-  } = req.body;
-
-  if (!customerName || !customerPhone || !date || !timeSlot || !guestCount) {
-    return res.status(400).json({
-      success: false,
-      error: 'Name, phone number, date, time slot, and guest count are required.'
-    });
-  }
-
-  const bookings = db.get('tableBookings') || [];
-  const countToday = bookings.length + 1;
-  const bookingRef = `TBL-${new Date().getFullYear()}-${String(countToday).padStart(3, '0')}`;
-  const now = new Date().toISOString();
-
-  // Find location name if not provided
-  let locName = locationName;
-  if (!locName) {
-    const locs = db.get('locations');
-    const matched = locs.find(l => l.id === locationId);
-    locName = matched ? matched.name : 'Shangrilla Dining';
-  }
-
-  const newBooking: TableBooking = {
-    id: `tbl-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-    bookingRef,
-    customerName: customerName.trim(),
-    customerPhone: customerPhone.trim(),
-    customerEmail: customerEmail?.trim(),
-    locationId: locationId || 'shangrilla-hazratganj',
-    locationName: locName,
-    date,
-    timeSlot,
-    guestCount: Number(guestCount) || 2,
-    seatingArea: seatingArea || 'AC Royal Darbar Hall',
-    specialRequests: specialRequests?.trim(),
-    status: 'CONFIRMED',
-    createdAt: now,
-    updatedAt: now
-  };
-
-  bookings.unshift(newBooking);
-  db.set('tableBookings', bookings);
-
-  // Broadcast real-time update
-  broadcastSSE('table_booking_created', newBooking);
-
-  // Audit log
-  const auditLogs = db.get('auditLogs');
-  auditLogs.unshift({
-    id: `aud-${Date.now()}`,
-    action: 'TABLE_BOOKING_CREATED',
-    entityType: 'ORDER',
-    entityId: newBooking.id,
-    changedBy: customerName,
-    details: `Table booked for ${guestCount} guests at ${locName} on ${date} at ${timeSlot} (${bookingRef})`,
-    timestamp: now
-  });
-  db.set('auditLogs', auditLogs);
-
-  res.status(201).json({ success: true, data: newBooking });
-});
-
-apiRouter.patch('/table-bookings/:id', (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { status, tableAssigned, specialRequests } = req.body;
-
-  const bookings = db.get('tableBookings') || [];
-  const idx = bookings.findIndex(b => b.id === id);
-
-  if (idx === -1) {
-    return res.status(404).json({ success: false, error: 'Table reservation not found.' });
-  }
-
-  const now = new Date().toISOString();
-  if (status) bookings[idx].status = status as TableBookingStatus;
-  if (tableAssigned !== undefined) bookings[idx].tableAssigned = tableAssigned;
-  if (specialRequests !== undefined) bookings[idx].specialRequests = specialRequests;
-  bookings[idx].updatedAt = now;
-
-  db.set('tableBookings', [...bookings]);
-  broadcastSSE('table_booking_updated', bookings[idx]);
-
-  res.json({ success: true, data: bookings[idx] });
-});
-
-// ----------------------------------------------------
 // Member Registration & Account Creation
 // ----------------------------------------------------
 apiRouter.post('/members/register', (req: Request, res: Response) => {
@@ -1535,6 +1417,32 @@ apiRouter.post('/auth/staff-login', (req: Request, res: Response) => {
     success: false,
     error: 'Invalid credentials. Please check your staff username and password.'
   });
+});
+
+// ----------------------------------------------------
+// Gemini Conversational Concierge & Gastronomy Assistant
+// ----------------------------------------------------
+apiRouter.post('/chat', async (req: Request, res: Response) => {
+  try {
+    const { message, history, locationId } = req.body;
+    if (!message || !String(message).trim()) {
+      return res.status(400).json({ success: false, error: 'Message is required' });
+    }
+
+    const response = await GeminiChatService.chat(
+      String(message).trim(),
+      Array.isArray(history) ? history : [],
+      locationId ? String(locationId) : undefined
+    );
+
+    res.json({ success: true, data: response });
+  } catch (err: any) {
+    console.error('[API /chat] Error handling chat request:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Failed to process chat response'
+    });
+  }
 });
 
 

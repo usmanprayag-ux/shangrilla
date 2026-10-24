@@ -27,7 +27,10 @@ import {
   ArrowRight,
   Heart,
   ChevronRight,
-  Lock
+  Lock,
+  Bot,
+  Tag,
+  Percent
 } from 'lucide-react';
 import { Location, MenuItem, Order } from './types/models';
 import { api } from './services/api';
@@ -39,7 +42,6 @@ import { CustomerFeedbackModal } from './components/CustomerFeedbackModal';
 import { OrderHistoryModal } from './components/OrderHistoryModal';
 import { BookEventModal } from './components/BookEventModal';
 import { LoyaltyModal } from './components/LoyaltyModal';
-import { TableBookingModal } from './components/TableBookingModal';
 import { BecomeMemberModal } from './components/BecomeMemberModal';
 import { StaffLoginModal } from './components/StaffLoginModal';
 import { VenueSelectModal } from './components/VenueSelectModal';
@@ -48,6 +50,7 @@ import { KitchenDisplay } from './components/KitchenDisplay';
 import { CashierDashboard } from './components/CashierDashboard';
 import { CollectionTV } from './components/CollectionTV';
 import { AdminPanel } from './components/AdminPanel';
+import { GeminiChatBot } from './components/GeminiChatBot';
 
 export function App() {
   const [locations, setLocations] = useState<Location[]>([]);
@@ -61,6 +64,10 @@ export function App() {
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [appliedCouponCode, setAppliedCouponCode] = useState<string>('');
+
+  // Gemini AI Chatbot state
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
 
   // Table QR Detection from URL
   const [tableParam, setTableParam] = useState<string | null>(null);
@@ -85,7 +92,6 @@ export function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
   const [isBookEventOpen, setIsBookEventOpen] = useState<boolean>(false);
   const [isLoyaltyOpen, setIsLoyaltyOpen] = useState<boolean>(false);
-  const [isTableBookingOpen, setIsTableBookingOpen] = useState<boolean>(false);
   const [isBecomeMemberOpen, setIsBecomeMemberOpen] = useState<boolean>(false);
   const [isStaffLoginOpen, setIsStaffLoginOpen] = useState<boolean>(false);
   const [isVenueSelectOpen, setIsVenueSelectOpen] = useState<boolean>(false);
@@ -109,19 +115,19 @@ export function App() {
 
           const savedVenueId = localStorage.getItem('shangrilla_selected_venue');
 
-          if (locParam) {
-            const matched = locs.find(l => l.id === locParam);
-            if (matched) setActiveLocation(matched);
-            else setActiveLocation(locs[0]);
-          } else if (savedVenueId) {
-            const matched = locs.find(l => l.id === savedVenueId);
-            if (matched) setActiveLocation(matched);
-            else setActiveLocation(locs[0]);
-          } else {
-            // First visit: ask user which venue they are in
-            setActiveLocation(locs[0]);
-            setIsInitialVenuePrompt(true);
-            setIsVenueSelectOpen(true);
+          if (locs.length > 0) {
+            if (locParam) {
+              const matched = locs.find(l => l.id === locParam);
+              setActiveLocation(matched || locs[0]);
+            } else if (savedVenueId) {
+              const matched = locs.find(l => l.id === savedVenueId);
+              setActiveLocation(matched || locs[0]);
+            } else {
+              // Default to primary location without any arrival popup
+              setActiveLocation(locs[0]);
+              setIsInitialVenuePrompt(false);
+              setIsVenueSelectOpen(false);
+            }
           }
         } else if (locs.length > 0) {
           setActiveLocation(locs[0]);
@@ -131,7 +137,7 @@ export function App() {
         setMenuItems(menu);
 
         const cats = Array.from(new Set(menu.map(m => m.category)));
-        setCategories(['All', ...cats]);
+        setCategories(['All', 'Featured', ...cats]);
       } catch (err) {
         console.error('Initialization error:', err);
       }
@@ -145,7 +151,7 @@ export function App() {
     api.getMenu(activeLocation.id).then(menu => {
       setMenuItems(menu);
       const cats = Array.from(new Set(menu.map(m => m.category)));
-      setCategories(['All', ...cats]);
+      setCategories(['All', 'Featured', ...cats]);
     });
   }, [activeLocation]);
 
@@ -247,7 +253,12 @@ export function App() {
 
   // Filtered menu
   const filteredDishes = menuItems.filter(dish => {
-    const matchesCategory = activeCategory === 'All' || dish.category === activeCategory;
+    const matchesCategory =
+      activeCategory === 'All'
+        ? true
+        : activeCategory === 'Featured'
+        ? dish.isFeatured
+        : dish.category === activeCategory;
     const matchesVeg = !vegOnly || dish.isVeg;
     const matchesSearch =
       !searchQuery.trim() ||
@@ -319,16 +330,31 @@ export function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#100d0e] text-[#f5efe6] font-['Plus_Jakarta_Sans',sans-serif] selection:bg-[#d97706]/30 selection:text-white flex flex-col">
+    <div className="min-h-screen bg-[#faf8f5] text-[#1c1917] font-['Plus_Jakarta_Sans',sans-serif] selection:bg-[#cba158]/30 selection:text-black flex flex-col">
       {/* 1. FLOATING GLASSMORPHISM SEARCH BAR & TOP NAVIGATION WITH HAMBURGER MENU */}
+      {/* 1. FLOATING GLASSMORPHISM SEARCH BAR & TOP NAVIGATION WITH LEFT HAMBURGER MENU */}
       <div className="fixed top-4 inset-x-0 z-40 flex justify-center px-3 sm:px-4 pointer-events-none">
-        <header className="pointer-events-auto w-full max-w-5xl bg-[#191315]/80 backdrop-blur-xl border border-white/10 rounded-2xl px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 sm:gap-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)]">
-          {/* Brand Wordmark */}
-          <a href="/" className="flex items-center gap-2 group shrink-0">
-            <span className="font-['Oswald',sans-serif] font-bold text-xl sm:text-2xl text-white tracking-wider uppercase group-hover:text-[#f5d78e] transition-colors">
-              SHANGRILLA
-            </span>
-          </a>
+        <header className="pointer-events-auto w-full max-w-5xl glass-white-nav rounded-2xl px-3 sm:px-5 py-2.5 flex items-center justify-between gap-3 sm:gap-4 shadow-[0_15px_35px_rgba(0,0,0,0.06)] border border-stone-200/90 transition-all">
+          {/* Left Section: Apple-Style Hamburger Menu Button + Brand Wordmark */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Hamburger Menu Toggle Button on the LEFT */}
+            <button
+              type="button"
+              onClick={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)}
+              className="p-2 text-stone-700 hover:text-stone-900 bg-stone-100/90 hover:bg-stone-200/80 active:scale-90 rounded-xl border border-stone-200 transition-all apple-press shadow-xs flex items-center justify-center cursor-pointer"
+              aria-label="Toggle navigation menu"
+              title="Open Navigation Menu"
+            >
+              <MenuIcon className={`w-4 h-4 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${isMobileDrawerOpen ? 'rotate-90' : 'rotate-0'}`} />
+            </button>
+
+            {/* Brand Wordmark */}
+            <a href="/" className="flex items-center gap-2 group shrink-0 apple-press">
+              <span className="font-['Oswald',sans-serif] font-bold text-xl sm:text-2xl text-stone-900 tracking-wider uppercase group-hover:text-[#b8860b] transition-colors">
+                SHANGRILLA
+              </span>
+            </a>
+          </div>
 
           {/* Integrated Glassmorphism Search Bar */}
           <div className="relative flex-1 max-w-xs hidden sm:block">
@@ -338,12 +364,12 @@ export function App() {
               placeholder="Search menu items..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 bg-white/5 hover:bg-white/10 focus:bg-black/50 border border-white/10 focus:border-[#d4972e] rounded-xl text-xs text-white placeholder-stone-400 focus:outline-none transition-all backdrop-blur-md"
+              className="w-full pl-8 pr-7 py-1.5 bg-stone-100/90 hover:bg-stone-100 focus:bg-white border border-stone-200 focus:border-[#cba158] rounded-xl text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#cba158]/20 transition-all backdrop-blur-md"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
                 aria-label="Clear search"
               >
                 <X className="w-3 h-3" />
@@ -351,88 +377,96 @@ export function App() {
             )}
           </div>
 
-          {/* Center Navigation Links: Strictly Menu, About, Locations, My Orders */}
-          <nav className="hidden md:flex items-center gap-6 text-[11px] font-['Oswald',sans-serif] font-semibold uppercase tracking-widest text-stone-300">
-            <a href="#menu" className="hover:text-white transition-colors">
+          {/* Center Navigation Links: Strictly Menu, About, Locations, My Orders, Ask Nawab AI */}
+          <nav className="hidden md:flex items-center gap-6 text-[11px] font-['Oswald',sans-serif] font-semibold uppercase tracking-widest text-stone-700">
+            <a href="#menu" className="hover:text-[#b8860b] transition-colors apple-press">
               Menu
             </a>
-            <a href="#about" className="hover:text-white transition-colors">
+            <a href="#about" className="hover:text-[#b8860b] transition-colors apple-press">
               About
             </a>
-            <a href="#locations" className="hover:text-white transition-colors">
+            <a href="#locations" className="hover:text-[#b8860b] transition-colors apple-press">
               Locations
             </a>
             <button
               onClick={() => setIsHistoryOpen(true)}
-              className="hover:text-white transition-colors flex items-center gap-1.5 text-stone-300"
+              className="hover:text-[#b8860b] transition-colors flex items-center gap-1.5 text-stone-700 apple-press"
             >
-              <History className="w-3.5 h-3.5 text-[#e5a83b]" />
+              <History className="w-3.5 h-3.5 text-[#cba158]" />
               <span>My Orders</span>
+            </button>
+            <button
+              onClick={() => setIsChatOpen(true)}
+              className="hover:text-[#b8860b] transition-colors flex items-center gap-1.5 text-stone-700 font-semibold apple-press"
+            >
+              <Bot className="w-3.5 h-3.5 text-[#b8860b]" />
+              <span>Ask Nawab AI</span>
             </button>
           </nav>
 
-          {/* Right Section: Active Venue Badge, Cart & Hamburger Menu Button */}
+          {/* Right Section: Active Venue Badge, Ask AI button, Cart */}
           <div className="flex items-center gap-2">
+            {/* Ask AI Pill Button */}
+            <button
+              type="button"
+              onClick={() => setIsChatOpen(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#cba158]/15 via-amber-500/10 to-[#cba158]/20 hover:from-[#cba158]/25 hover:to-[#cba158]/35 border border-[#cba158]/40 text-[#8a5d11] hover:text-stone-900 text-xs font-semibold shadow-xs transition-all apple-press"
+              title="Chat with Nawab AI for dish pairings & 5% off discounts"
+            >
+              <Bot className="w-3.5 h-3.5 text-[#b8860b] animate-bounce" />
+              <span>Ask AI · 5% Off</span>
+            </button>
+
             {/* Active Venue Switcher Chip */}
             {activeLocation && (
               <button
                 type="button"
                 onClick={() => setIsVenueSelectOpen(true)}
-                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-stone-300 hover:text-white text-[10px] font-mono transition-all"
+                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200/70 border border-stone-200 text-stone-800 text-[10px] font-mono transition-all apple-press"
                 title="Click to switch venue branch"
               >
-                <Compass className="w-3 h-3 text-[#d4972e]" />
+                <Compass className="w-3 h-3 text-[#b8860b]" />
                 <span className="truncate max-w-[100px]">
                   {activeLocation.code === 'DHABA' ? 'Highway Dhaba' : 'Hazratganj'}
                 </span>
-                <span className="text-stone-500 text-[9px]">▾</span>
+                <span className="text-stone-400 text-[9px]">▾</span>
               </button>
             )}
 
             {/* Shopping Bag Button */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative p-2 text-stone-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors"
+              className="relative p-2 text-stone-700 hover:text-stone-900 bg-stone-100/90 hover:bg-stone-200/80 rounded-xl border border-stone-200 transition-all apple-press"
               aria-label="Shopping Cart"
             >
               <ShoppingBag className="w-4 h-4" />
               {totalCartCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#e5a83b] text-black font-mono font-bold text-[10px] rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#cba158] text-white font-mono font-bold text-[10px] rounded-full flex items-center justify-center shadow">
                   {totalCartCount}
                 </span>
               )}
-            </button>
-
-            {/* Hamburger Menu Toggle Button */}
-            <button
-              type="button"
-              onClick={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)}
-              className="p-2 text-stone-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors"
-              aria-label="Toggle menu"
-            >
-              <MenuIcon className="w-4 h-4" />
             </button>
           </div>
         </header>
       </div>
 
-      {/* HAMBURGER SIDE DRAWER (Glassmorphism Overlay & Drawer) */}
+      {/* HAMBURGER SIDE DRAWER (Left Slide with Apple-Style Fluid Spring Physics & Frosted Glass) */}
       {isMobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex justify-start bg-black/35 backdrop-blur-md animate-apple-backdrop">
           <div
             className="fixed inset-0"
             onClick={() => setIsMobileDrawerOpen(false)}
           />
-          <div className="relative w-full max-w-sm bg-[#161113]/95 backdrop-blur-2xl border-l border-white/10 h-full p-6 flex flex-col justify-between shadow-2xl z-10 overflow-y-auto">
+          <div className="relative w-full max-w-sm bg-white/95 backdrop-blur-2xl border-r border-stone-200/90 h-full p-6 flex flex-col justify-between shadow-[0_25px_60px_rgba(0,0,0,0.25)] z-10 overflow-y-auto animate-apple-drawer-left">
             <div className="space-y-6">
               {/* Drawer Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-stone-800">
-                <span className="font-['Oswald',sans-serif] font-bold text-xl text-white tracking-wider uppercase">
+              <div className="flex items-center justify-between pb-4 border-b border-stone-200">
+                <span className="font-['Oswald',sans-serif] font-bold text-xl text-stone-900 tracking-wider uppercase">
                   SHANGRILLA
                 </span>
                 <button
                   onClick={() => setIsMobileDrawerOpen(false)}
-                  className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                  className="p-1.5 text-stone-400 hover:text-stone-700 rounded-lg hover:bg-stone-100 transition-all apple-press"
                   aria-label="Close menu"
                 >
                   <X className="w-5 h-5" />
@@ -440,11 +474,11 @@ export function App() {
               </div>
 
               {/* Active Venue Switcher Box */}
-              <div className="p-3.5 rounded-xl bg-black/40 border border-stone-800 space-y-2">
-                <div className="text-[10px] uppercase font-mono tracking-wider text-stone-400">
+              <div className="p-4 rounded-xl bg-[#faf8f5] border border-stone-200 space-y-2.5 shadow-xs apple-card">
+                <div className="text-[10px] uppercase font-mono tracking-wider text-stone-500">
                   Current Selected Venue
                 </div>
-                <div className="font-['Oswald',sans-serif] text-sm text-[#f5d78e] font-bold uppercase truncate">
+                <div className="font-['Oswald',sans-serif] text-sm text-[#b8860b] font-bold uppercase truncate">
                   {activeLocation?.name || 'Shangrilla Dining'}
                 </div>
                 <button
@@ -452,9 +486,9 @@ export function App() {
                     setIsMobileDrawerOpen(false);
                     setIsVenueSelectOpen(true);
                   }}
-                  className="w-full py-1.5 text-xs rounded bg-white/5 hover:bg-white/10 text-white font-medium border border-white/10 transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full py-2 text-xs rounded-lg bg-white hover:bg-stone-50 text-stone-800 font-semibold border border-stone-200 shadow-sm transition-all flex items-center justify-center gap-1.5 spatial-interactive"
                 >
-                  <Compass className="w-3.5 h-3.5 text-[#d4972e]" />
+                  <Compass className="w-3.5 h-3.5 text-[#b8860b]" />
                   <span>Switch Venue (Restaurant / Dhaba)</span>
                 </button>
               </div>
@@ -467,37 +501,37 @@ export function App() {
                   placeholder="Search kebabs, biryani, curries..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-stone-500 focus:outline-none focus:border-[#d4972e]"
+                  className="w-full pl-8 pr-3 py-2 bg-[#faf8f5] border border-stone-200 rounded-xl text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-[#cba158]"
                 />
               </div>
 
-              {/* Primary Drawer Navigation Links */}
+              {/* Primary Drawer Navigation Links with Apple Cascade Staggering */}
               <div className="space-y-1 text-sm font-['Oswald',sans-serif] uppercase tracking-wider">
                 <a
                   href="#menu"
                   onClick={() => setIsMobileDrawerOpen(false)}
-                  className="flex items-center justify-between p-2.5 rounded-lg text-stone-300 hover:text-white hover:bg-white/5 transition-colors"
+                  className="flex items-center justify-between p-2.5 rounded-xl text-stone-700 hover:text-stone-900 hover:bg-stone-100 transition-all apple-press apple-stagger-1"
                 >
                   <span>Our Menu</span>
-                  <ChevronRight className="w-4 h-4 text-stone-500" />
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
                 </a>
 
                 <a
                   href="#about"
                   onClick={() => setIsMobileDrawerOpen(false)}
-                  className="flex items-center justify-between p-2.5 rounded-lg text-stone-300 hover:text-white hover:bg-white/5 transition-colors"
+                  className="flex items-center justify-between p-2.5 rounded-xl text-stone-700 hover:text-stone-900 hover:bg-stone-100 transition-all apple-press apple-stagger-2"
                 >
                   <span>About Our Culinary Heritage</span>
-                  <ChevronRight className="w-4 h-4 text-stone-500" />
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
                 </a>
 
                 <a
                   href="#locations"
                   onClick={() => setIsMobileDrawerOpen(false)}
-                  className="flex items-center justify-between p-2.5 rounded-lg text-stone-300 hover:text-white hover:bg-white/5 transition-colors"
+                  className="flex items-center justify-between p-2.5 rounded-xl text-stone-700 hover:text-stone-900 hover:bg-stone-100 transition-all apple-press apple-stagger-3"
                 >
                   <span>Locations & Live Map</span>
-                  <ChevronRight className="w-4 h-4 text-stone-500" />
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
                 </a>
 
                 <button
@@ -505,37 +539,42 @@ export function App() {
                     setIsMobileDrawerOpen(false);
                     setIsHistoryOpen(true);
                   }}
-                  className="w-full flex items-center justify-between p-2.5 rounded-lg text-stone-300 hover:text-white hover:bg-white/5 transition-colors text-left"
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl text-stone-700 hover:text-stone-900 hover:bg-stone-100 transition-all text-left apple-press apple-stagger-4"
                 >
                   <div className="flex items-center gap-2">
-                    <History className="w-4 h-4 text-[#d4972e]" />
+                    <History className="w-4 h-4 text-[#cba158]" />
                     <span>My Past Orders</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-stone-500" />
+                  <ChevronRight className="w-4 h-4 text-stone-400" />
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    setIsChatOpen(true);
+                  }}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-amber-50 to-[#faf8f5] border border-[#cba158]/35 text-stone-900 hover:bg-amber-100/50 transition-all text-left apple-press apple-stagger-5"
+                >
+                  <div className="flex items-center gap-2">
+                    <Bot className="w-4 h-4 text-[#b8860b]" />
+                    <span className="font-bold">Ask Nawab AI Concierge</span>
+                  </div>
+                  <span className="text-[10px] bg-[#cba158] text-white font-mono px-2 py-0.5 rounded-full font-bold shadow-xs">
+                    5% Off
+                  </span>
                 </button>
               </div>
 
               {/* Special Guest Actions */}
-              <div className="pt-2 border-t border-stone-800 space-y-2">
-                <button
-                  onClick={() => {
-                    setIsMobileDrawerOpen(false);
-                    setIsTableBookingOpen(true);
-                  }}
-                  className="w-full py-2.5 px-3.5 rounded-xl bg-[#d4972e] hover:bg-[#e5a83b] text-black font-['Oswald',sans-serif] uppercase font-bold text-xs tracking-wider flex items-center justify-center gap-2 shadow transition-all"
-                >
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>Book a Table (Reservation)</span>
-                </button>
-
+              <div className="pt-2 border-t border-stone-200 space-y-2">
                 <button
                   onClick={() => {
                     setIsMobileDrawerOpen(false);
                     setIsBookEventOpen(true);
                   }}
-                  className="w-full py-2 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-[#f5d78e] font-['Oswald',sans-serif] uppercase font-semibold text-xs tracking-wider border border-white/10 flex items-center justify-center gap-2 transition-all"
+                  className="w-full py-2.5 px-3.5 rounded-xl bg-[#cba158] hover:bg-[#b8860b] text-white font-['Oswald',sans-serif] uppercase font-bold text-xs tracking-wider border border-[#cba158]/50 flex items-center justify-center gap-2 shadow-md transition-all apple-press"
                 >
-                  <PartyPopper className="w-3.5 h-3.5 text-[#d4972e]" />
+                  <PartyPopper className="w-3.5 h-3.5 text-white" />
                   <span>Book an Event / Banquet</span>
                 </button>
 
@@ -544,9 +583,9 @@ export function App() {
                     setIsMobileDrawerOpen(false);
                     setIsBecomeMemberOpen(true);
                   }}
-                  className="w-full py-2 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-stone-200 font-['Oswald',sans-serif] uppercase font-semibold text-xs tracking-wider border border-white/10 flex items-center justify-center gap-2 transition-all"
+                  className="w-full py-2 px-3.5 rounded-xl bg-[#faf8f5] hover:bg-stone-100 text-stone-800 font-['Oswald',sans-serif] uppercase font-semibold text-xs tracking-wider border border-stone-200 flex items-center justify-center gap-2 transition-all apple-press"
                 >
-                  <UserPlus className="w-3.5 h-3.5 text-[#d4972e]" />
+                  <UserPlus className="w-3.5 h-3.5 text-[#b8860b]" />
                   <span>Become a Member (+100 Pts)</span>
                 </button>
 
@@ -555,28 +594,28 @@ export function App() {
                     setIsMobileDrawerOpen(false);
                     setIsLoyaltyOpen(true);
                   }}
-                  className="w-full py-2 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-stone-200 font-['Oswald',sans-serif] uppercase font-semibold text-xs tracking-wider border border-white/10 flex items-center justify-center gap-2 transition-all"
+                  className="w-full py-2 px-3.5 rounded-xl bg-[#faf8f5] hover:bg-stone-100 text-stone-800 font-['Oswald',sans-serif] uppercase font-semibold text-xs tracking-wider border border-stone-200 flex items-center justify-center gap-2 transition-all apple-press"
                 >
-                  <Crown className="w-3.5 h-3.5 text-[#d4972e]" />
+                  <Crown className="w-3.5 h-3.5 text-[#b8860b]" />
                   <span>Royal Rewards Perks</span>
                 </button>
               </div>
             </div>
 
             {/* Drawer Bottom: Password Protected Staff Login */}
-            <div className="pt-6 border-t border-stone-800 space-y-3">
+            <div className="pt-6 border-t border-stone-200 space-y-3">
               <button
                 onClick={() => {
                   setIsMobileDrawerOpen(false);
                   setIsStaffLoginOpen(true);
                 }}
-                className="w-full py-2 px-3 rounded-lg bg-black/60 hover:bg-black text-stone-400 hover:text-[#d4972e] border border-stone-800 text-xs flex items-center justify-center gap-2 transition-colors font-mono"
+                className="w-full py-2 px-3 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 hover:text-stone-900 border border-stone-200 text-xs flex items-center justify-center gap-2 transition-colors font-mono"
               >
-                <Lock className="w-3.5 h-3.5 text-[#d4972e]" />
+                <Lock className="w-3.5 h-3.5 text-[#b8860b]" />
                 <span>Staff Portal Login</span>
               </button>
 
-              <div className="text-[10px] text-stone-600 text-center font-mono">
+              <div className="text-[10px] text-stone-400 text-center font-mono">
                 SHANGRILLA v2.4 · Lucknow, Uttar Pradesh
               </div>
             </div>
@@ -584,69 +623,83 @@ export function App() {
         </div>
       )}
 
-      {/* 2. FULL-BLEED HERO SECTION */}
-      <section className="relative w-full min-h-[85vh] sm:min-h-[90vh] flex items-center justify-center text-center overflow-hidden bg-black pt-16">
+      {/* 2. FULL-BLEED HERO SECTION WITH CINEMATIC LUMINOUS OVERLAY */}
+      <section className="relative w-full min-h-[85vh] sm:min-h-[90vh] flex items-center justify-center text-center overflow-hidden bg-stone-900 pt-16">
         {/* Background Live Cooking Video Loop */}
         <video
           autoPlay
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover scale-105 filter brightness-75"
+          className="absolute inset-0 w-full h-full object-cover scale-105 filter brightness-85"
           src="/assets/shangrilla-live-kitchen.mp4"
         />
 
-        {/* Cinematic dark measured overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#100d0e] via-black/45 to-black/60 pointer-events-none" />
+        {/* Cinematic measured overlay for crystal text contrast */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#faf8f5] via-black/45 to-black/65 pointer-events-none" />
 
-        {/* Hero Content */}
+        {/* Hero Content with Spatial Layering */}
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-20 space-y-6">
           {/* Active Venue Banner */}
           {activeLocation && (
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-xs text-stone-200">
-              <span className="w-2 h-2 rounded-full bg-[#d4972e] animate-pulse" />
-              <span>Dining at: <strong className="text-white">{activeLocation.name}</strong></span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 backdrop-blur-md border border-stone-200/90 text-xs text-stone-800 shadow-md spatial-interactive">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#cba158] animate-pulse" />
+              <span>Dining at: <strong className="text-stone-900">{activeLocation.name}</strong></span>
               <button
                 onClick={() => setIsVenueSelectOpen(true)}
-                className="text-[#d4972e] hover:underline ml-1 font-mono text-[11px]"
+                className="text-[#b8860b] hover:underline ml-1 font-mono text-[11px] font-semibold"
               >
                 Change
               </button>
             </div>
           )}
 
-          <h1 className="font-['Oswald',sans-serif] font-bold text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-white uppercase tracking-tight leading-[1.05]">
+          {/* Offer & Announcement Pill */}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              onClick={() => {
+                setAppliedCouponCode('ROYAL3K');
+                setIsCartOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500/90 to-[#b8860b]/90 text-white text-xs font-semibold shadow-lg hover:brightness-110 transition-all border border-amber-300/40"
+            >
+              <Percent className="w-3.5 h-3.5" />
+              <span>Royal Feast: <strong>Flat 5% Off</strong> on orders ₹3,000+ (Use <strong>ROYAL3K</strong>)</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
+            </button>
+          </div>
+
+          <h1 className="font-['Oswald',sans-serif] font-bold text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-white uppercase tracking-tight leading-[1.05] drop-shadow-xl">
             Savour the Flavours<br />That Tell a Story
           </h1>
 
-          <p className="font-['Oswald',sans-serif] text-sm sm:text-base md:text-lg text-stone-200 uppercase tracking-widest font-normal max-w-xl mx-auto leading-relaxed">
+          <p className="font-['Oswald',sans-serif] text-sm sm:text-base md:text-lg text-stone-100 uppercase tracking-widest font-normal max-w-xl mx-auto leading-relaxed drop-shadow">
             Handcrafted dishes and signature drinks<br className="hidden sm:inline" /> made fresh, served with passion.
           </p>
 
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
             <a
               href="#menu"
-              className="px-7 py-3 bg-white hover:bg-stone-100 text-black font-['Oswald',sans-serif] font-bold text-xs uppercase tracking-wider rounded-sm shadow-xl transition-all hover:scale-105"
+              className="inline-block px-8 py-3.5 bg-white hover:bg-stone-50 text-stone-900 font-['Oswald',sans-serif] font-bold text-xs uppercase tracking-wider rounded-xl shadow-2xl transition-all spatial-interactive border border-stone-200 hover:border-[#cba158]"
             >
               Explore Our Menu
             </a>
-
             <button
-              onClick={() => setIsTableBookingOpen(true)}
-              className="px-7 py-3 bg-[#d4972e] hover:bg-[#e5a83b] text-black font-['Oswald',sans-serif] font-bold text-xs uppercase tracking-wider rounded-sm shadow-xl transition-all hover:scale-105 flex items-center gap-1.5"
+              onClick={() => setIsChatOpen(true)}
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-black/55 hover:bg-black/75 backdrop-blur-md text-amber-200 hover:text-white font-['Oswald',sans-serif] font-bold text-xs uppercase tracking-wider rounded-xl shadow-2xl transition-all spatial-interactive border border-[#cba158]/60 hover:border-[#cba158]"
             >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Book a Table</span>
+              <Bot className="w-4 h-4 text-[#cba158]" />
+              <span>Ask AI Concierge</span>
             </button>
           </div>
         </div>
       </section>
 
-      {/* 3. WARM CREAM SECTION */}
-      <section id="about" className="w-full bg-[#FAF7F2] text-[#1A1817] py-20 md:py-28 px-6 sm:px-8 lg:px-12">
+      {/* 3. WARM IVORY/CREAM SECTION */}
+      <section id="about" className="w-full bg-[#FAF7F2] text-[#1A1817] py-20 md:py-28 px-6 sm:px-8 lg:px-12 border-b border-stone-200">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
           <div className="md:col-span-3">
-            <span className="font-['Oswald',sans-serif] text-xs font-semibold uppercase tracking-widest text-stone-600">
+            <span className="font-['Oswald',sans-serif] text-xs font-semibold uppercase tracking-widest text-[#b8860b]">
               Welcome to Shangrilla
             </span>
           </div>
@@ -663,7 +716,7 @@ export function App() {
             <div className="pt-2">
               <a
                 href="#locations"
-                className="inline-block px-6 py-2.5 border border-stone-800 hover:border-black text-stone-900 hover:text-black font-['Oswald',sans-serif] font-semibold text-xs uppercase tracking-wider rounded-sm transition-colors"
+                className="inline-block px-6 py-2.5 bg-white border border-stone-300 hover:border-[#b8860b] text-stone-800 hover:text-[#b8860b] font-['Oswald',sans-serif] font-semibold text-xs uppercase tracking-wider rounded-xl transition-all spatial-interactive shadow-sm"
               >
                 View Venues & Live GPS Map →
               </a>
@@ -675,56 +728,57 @@ export function App() {
       {/* 4. HORIZONTAL IMAGE GALLERY STRIP */}
       <section className="w-full bg-[#FAF7F2] pb-16 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
             {galleryStrip.map((item, idx) => (
               <div
                 key={idx}
-                className="relative aspect-[3/4] rounded-sm overflow-hidden bg-stone-300 shadow-md group"
+                className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-stone-200 shadow-sm border border-stone-200/80 group spatial-interactive"
               >
                 <img
                   src={item.imageUrl}
                   alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src =
                       'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80';
                   }}
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 5. DARK CHARCOAL MENU SECTION WITH RECOMMENDED FOR YOU */}
-      <section id="menu" className="w-full bg-[#120F10] text-white py-20 md:py-28 px-4 sm:px-6 lg:px-8 border-t border-stone-800">
+      {/* 5. PRISTINE WHITE MENU SECTION WITH RECOMMENDED FOR YOU */}
+      <section id="menu" className="w-full bg-white text-stone-900 py-20 md:py-28 px-4 sm:px-6 lg:px-8 border-t border-stone-200">
         <div className="max-w-6xl mx-auto space-y-16">
           {/* Section Header */}
           <div className="text-center space-y-2">
-            <span className="font-['Oswald',sans-serif] text-[11px] uppercase tracking-widest text-stone-400 font-medium">
+            <span className="font-['Oswald',sans-serif] text-[11px] uppercase tracking-widest text-[#b8860b] font-semibold">
               Our Dishes
             </span>
-            <h2 className="font-['Oswald',sans-serif] font-bold text-3xl sm:text-4xl md:text-5xl text-white uppercase tracking-tight">
+            <h2 className="font-['Oswald',sans-serif] font-bold text-3xl sm:text-4xl md:text-5xl text-stone-900 uppercase tracking-tight">
               Dishes That Keep Guests Coming Back.
             </h2>
           </div>
 
           {/* 5.1. RECOMMENDED FOR YOU SECTION (Personalized via Loyalty & Past Order History) */}
-          <div className="p-6 sm:p-8 rounded-2xl bg-[#181315] border border-[#d4972e]/30 shadow-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-stone-800/80">
+          <div className="p-6 sm:p-8 rounded-2xl bg-[#faf8f5] border border-[#cba158]/40 shadow-xl space-y-6 spatial-card">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-stone-200">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-lg bg-[#d4972e]/20 border border-[#d4972e]/30 flex items-center justify-center text-[#f5d78e]">
+                  <span className="w-6 h-6 rounded-lg bg-[#cba158]/15 border border-[#cba158]/30 flex items-center justify-center text-[#b8860b]">
                     <Sparkles className="w-3.5 h-3.5" />
                   </span>
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-[#d4972e] font-semibold">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-[#b8860b] font-semibold">
                     {pastOrders.length > 0 ? 'Curated For Your Palate' : 'Royal Chef Selections'}
                   </span>
                 </div>
-                <h3 className="font-['Oswald',sans-serif] font-bold text-2xl text-white uppercase tracking-tight">
+                <h3 className="font-['Oswald',sans-serif] font-bold text-2xl text-stone-900 uppercase tracking-tight">
                   Recommended for You
                 </h3>
-                <p className="text-xs text-stone-400 font-light">
+                <p className="text-xs text-stone-600 font-light">
                   {pastOrders.length > 0
                     ? `Based on your previous orders as a royal member (${customerName || customerPhone}).`
                     : 'Personalized signature dishes favored by food connoisseurs in Lucknow.'}
@@ -734,9 +788,9 @@ export function App() {
               {!customerPhone && (
                 <button
                   onClick={() => setIsBecomeMemberOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-stone-200 border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition-colors self-start sm:self-auto"
+                  className="px-4 py-2 rounded-xl bg-white hover:bg-stone-50 text-stone-800 border border-stone-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm spatial-interactive self-start sm:self-auto"
                 >
-                  <UserPlus className="w-3.5 h-3.5 text-[#d4972e]" />
+                  <UserPlus className="w-3.5 h-3.5 text-[#b8860b]" />
                   <span>Join Royal Club to Personalize</span>
                 </button>
               )}
@@ -748,47 +802,47 @@ export function App() {
                 <div
                   key={`rec-${dish.id}`}
                   onClick={() => setSelectedDish(dish)}
-                  className="group relative bg-[#1f191b] border border-stone-800 hover:border-[#d4972e]/60 rounded-xl overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-300 shadow-md hover:shadow-xl"
+                  className="group relative bg-white border border-stone-200 hover:border-[#cba158] rounded-2xl overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-300 shadow-sm hover:shadow-2xl spatial-card"
                 >
-                  <div className="relative aspect-[4/3] w-full bg-stone-900 overflow-hidden">
+                  <div className="relative aspect-[4/3] w-full bg-stone-100 overflow-hidden">
                     <img
                       src={dish.imageUrl}
                       alt={dish.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src =
                           'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80';
                       }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
 
                     <div className="absolute top-2.5 left-2.5">
-                      <span className="px-2 py-0.5 rounded bg-black/60 backdrop-blur-md text-[10px] font-mono text-[#f5d78e] border border-white/10">
+                      <span className="px-2.5 py-0.5 rounded-full bg-white/90 backdrop-blur-md text-[10px] font-mono text-[#b8860b] font-bold border border-stone-200 shadow-sm">
                         {pastOrders.length > 0 ? 'Past Favorite' : 'Must Try'}
                       </span>
                     </div>
 
-                    <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-white">
+                    <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-white drop-shadow-md">
                       <span className="font-mono font-bold text-sm tabular-nums">
                         ₹{dish.discountedPrice ?? dish.price}
                       </span>
-                      <span className="text-[10px] uppercase font-mono text-stone-300">
+                      <span className="text-[10px] uppercase font-mono text-stone-200">
                         {dish.portionSize}
                       </span>
                     </div>
                   </div>
 
-                  <div className="p-3.5 space-y-2 flex-1 flex flex-col justify-between">
+                  <div className="p-4 space-y-2.5 flex-1 flex flex-col justify-between">
                     <div>
-                      <h4 className="font-['Oswald',sans-serif] font-bold text-sm text-white uppercase group-hover:text-[#f5d78e] transition-colors leading-snug">
+                      <h4 className="font-['Oswald',sans-serif] font-bold text-sm text-stone-900 uppercase group-hover:text-[#b8860b] transition-colors leading-snug">
                         {dish.name}
                       </h4>
                       {dish.hindiName && (
-                        <span className="text-[10px] text-[#e5a83b] block mt-0.5 font-serif">
+                        <span className="text-[10px] text-[#b8860b] block mt-0.5 font-serif font-medium">
                           {dish.hindiName}
                         </span>
                       )}
-                      <p className="text-[11px] text-stone-400 line-clamp-2 mt-1 font-light leading-relaxed">
+                      <p className="text-[11px] text-stone-500 line-clamp-2 mt-1 font-light leading-relaxed">
                         {dish.description}
                       </p>
                     </div>
@@ -799,7 +853,7 @@ export function App() {
                         e.stopPropagation();
                         setSelectedDish(dish);
                       }}
-                      className="w-full py-2 bg-[#d4972e] hover:bg-[#e5a83b] text-black font-['Oswald',sans-serif] uppercase font-bold text-xs rounded-lg flex items-center justify-center gap-1 transition-colors"
+                      className="w-full py-2.5 bg-[#cba158] hover:bg-[#b8860b] text-white font-['Oswald',sans-serif] uppercase font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md spatial-interactive"
                     >
                       <span>Add to Order</span>
                       <ArrowUpRight className="w-3.5 h-3.5" />
@@ -810,84 +864,135 @@ export function App() {
             </div>
           </div>
 
+          {/* Royal Offers & Featured Specials Highlight Banner */}
+          <div className="p-6 rounded-2xl bg-gradient-to-r from-amber-500/10 via-[#cba158]/15 to-amber-600/10 border border-[#cba158]/40 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 spatial-card">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#cba158] text-white text-[10px] font-mono font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
+                  <Percent className="w-3 h-3" />
+                  Royal Offer · 5% Off
+                </span>
+                <span className="text-[10px] font-mono text-stone-500">Code: <strong className="text-stone-900 font-bold">ROYAL3K</strong></span>
+              </div>
+              <h3 className="font-['Oswald',sans-serif] font-bold text-xl sm:text-2xl text-stone-900 uppercase tracking-tight">
+                5% Off Orders of ₹3,000 & Above
+              </h3>
+              <p className="text-xs text-stone-600 max-w-xl font-light">
+                Indulge in our slow-cooked royal delicacies. Apply coupon <span className="font-mono font-bold text-[#b8860b]">ROYAL3K</span> in your bag for an instant 5% off up to ₹1,000. Ask our Nawab AI concierge for signature recommendations!
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 self-start md:self-center shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setAppliedCouponCode('ROYAL3K');
+                  setIsCartOpen(true);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-[#cba158] hover:bg-[#b8860b] text-white text-xs font-['Oswald',sans-serif] uppercase font-bold tracking-wider shadow-md hover:shadow-lg transition-all spatial-interactive flex items-center gap-1.5"
+              >
+                <Tag className="w-3.5 h-3.5" />
+                <span>Apply ROYAL3K</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsChatOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-white hover:bg-stone-50 text-stone-800 border border-stone-200 text-xs font-['Oswald',sans-serif] uppercase font-bold tracking-wider shadow-sm transition-all spatial-interactive flex items-center gap-1.5"
+              >
+                <Bot className="w-3.5 h-3.5 text-[#b8860b]" />
+                <span>Ask Nawab AI</span>
+              </button>
+            </div>
+          </div>
+
           {/* 5.2. Filter Bar: Categories + Veg Toggle */}
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="text-sm font-['Oswald',sans-serif] uppercase tracking-wider text-stone-300">
+              <div className="text-sm font-['Oswald',sans-serif] uppercase tracking-wider text-stone-700 font-semibold">
                 Explore Full Royal Menu ({filteredDishes.length} Dishes)
               </div>
 
               <button
                 type="button"
                 onClick={() => setVegOnly(!vegOnly)}
-                className={`px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 border transition-colors ${
+                className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all spatial-interactive ${
                   vegOnly
-                    ? 'bg-emerald-950 text-emerald-300 border-emerald-600'
-                    : 'bg-[#1b1618] text-stone-400 border-stone-800 hover:text-white'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-sm'
+                    : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200/60'
                 }`}
               >
                 <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-                  vegOnly ? 'border-emerald-400 bg-emerald-500' : 'border-stone-500'
+                  vegOnly ? 'border-emerald-500 bg-emerald-600' : 'border-stone-400 bg-white'
                 }`}>
-                  {vegOnly && <Check className="w-3 h-3 text-black" />}
+                  {vegOnly && <Check className="w-3 h-3 text-white stroke-[3]" />}
                 </div>
                 <span>Pure Vegetarian</span>
               </button>
             </div>
 
             {/* Segmented Category Buttons */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
               {categories.map(cat => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-3.5 py-1.5 rounded text-xs font-['Oswald',sans-serif] uppercase tracking-wider whitespace-nowrap transition-colors ${
+                  className={`px-4 py-2 rounded-xl text-xs font-['Oswald',sans-serif] uppercase tracking-wider whitespace-nowrap transition-all spatial-interactive ${
                     activeCategory === cat
-                      ? 'bg-white text-black font-bold'
-                      : 'bg-[#1b1618] text-stone-400 hover:text-white border border-stone-800'
+                      ? 'bg-[#cba158] text-white font-bold shadow-md'
+                      : 'bg-stone-100 text-stone-700 hover:text-stone-900 hover:bg-stone-200/70 border border-stone-200'
                   }`}
                 >
-                  {cat}
+                  {cat === 'Featured' ? '⭐ Featured Dishes' : cat}
                 </button>
               ))}
             </div>
           </div>
 
           {/* 5.3. Dishes Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
             {filteredDishes.map((dish) => (
               <div
                 key={dish.id}
                 onClick={() => setSelectedDish(dish)}
-                className="group relative bg-[#1A1617] border border-stone-800 hover:border-stone-600 rounded-sm overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl"
+                className="group relative bg-white border border-stone-200 hover:border-[#cba158] rounded-2xl overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-300 shadow-sm hover:shadow-2xl spatial-card"
               >
-                <div className="relative aspect-[4/5] w-full bg-stone-900 overflow-hidden">
+                <div className="relative aspect-[4/5] w-full bg-stone-100 overflow-hidden">
                   <img
                     src={dish.imageUrl}
                     alt={dish.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src =
                         'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80';
                     }}
                   />
 
-                  <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none" />
-                  <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none" />
+                  <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/75 via-black/35 to-transparent pointer-events-none" />
+                  <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 via-black/35 to-transparent pointer-events-none" />
 
-                  <div className="absolute top-3 inset-x-3">
+                  {/* Featured Badge */}
+                  {dish.isFeatured && (
+                    <div className="absolute top-2.5 right-2.5 z-10">
+                      <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-[#cba158] text-white text-[9px] font-bold uppercase tracking-wider shadow-md flex items-center gap-1">
+                        <Star className="w-2.5 h-2.5 fill-current" />
+                        Featured
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="absolute top-3 inset-x-3 pr-16">
                     <span className="font-['Oswald',sans-serif] font-bold text-xs sm:text-sm text-white uppercase tracking-wider block leading-tight drop-shadow-md">
                       {dish.name}
                     </span>
                     {dish.hindiName && (
-                      <span className="text-[10px] text-[#e5a83b] font-serif block mt-0.5">
+                      <span className="text-[10px] text-[#edd89f] font-serif block mt-0.5">
                         {dish.hindiName}
                       </span>
                     )}
                   </div>
 
                   <div className="absolute bottom-3 inset-x-3 flex items-center justify-between">
-                    <span className="font-mono font-bold text-sm text-white tabular-nums drop-shadow">
+                    <span className="font-mono font-bold text-sm text-white tabular-nums drop-shadow-md">
                       ₹{dish.discountedPrice ?? dish.price}
                     </span>
 
@@ -897,11 +1002,11 @@ export function App() {
                         e.stopPropagation();
                         setSelectedDish(dish);
                       }}
-                      className="w-7 h-7 bg-white hover:bg-[#d4972e] text-black rounded-sm flex items-center justify-center transition-colors shadow"
+                      className="w-8 h-8 bg-[#cba158] hover:bg-[#b8860b] text-white rounded-xl flex items-center justify-center transition-all shadow-md hover:scale-110 active:scale-95"
                       title="Add to cart / Customize"
                       aria-label={`Add ${dish.name} to cart`}
                     >
-                      <ArrowUpRight className="w-4 h-4" />
+                      <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
                     </button>
                   </div>
                 </div>
@@ -912,16 +1017,16 @@ export function App() {
       </section>
 
       {/* 6. LOCATIONS SECTION WITH LIVE INTERACTIVE MAP SYNCED TO USER VENUE */}
-      <section id="locations" className="w-full bg-[#161214] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-stone-800">
+      <section id="locations" className="w-full bg-[#FAF7F2] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-t border-stone-200">
         <div className="max-w-6xl mx-auto space-y-10">
           <div className="text-center space-y-2">
-            <span className="font-['Oswald',sans-serif] text-xs uppercase tracking-widest text-[#d4972e]">
+            <span className="font-['Oswald',sans-serif] text-xs uppercase tracking-widest text-[#b8860b] font-semibold">
               Lucknow, Uttar Pradesh
             </span>
-            <h3 className="font-['Oswald',sans-serif] font-bold text-2xl sm:text-4xl text-white uppercase tracking-tight">
+            <h3 className="font-['Oswald',sans-serif] font-bold text-2xl sm:text-4xl text-stone-900 uppercase tracking-tight">
               Our Venues & Live GPS Map
             </h3>
-            <p className="text-xs text-stone-400 max-w-xl mx-auto font-light">
+            <p className="text-xs text-stone-600 max-w-xl mx-auto font-light">
               Explore our Hazratganj Royal Fine Dining Hall and our 24/7 Highway Express Dhaba on NH-27.
             </p>
           </div>
@@ -931,33 +1036,28 @@ export function App() {
             locations={locations}
             activeLocationId={activeLocation?.id}
             onSelectLocation={handleVenueSelected}
-            onBookTable={(locId) => {
-              const matched = locations.find(l => l.id === locId);
-              if (matched) setActiveLocation(matched);
-              setIsTableBookingOpen(true);
-            }}
           />
         </div>
       </section>
 
       {/* 7. BANQUET EVENTS & ROYAL REWARDS SHOWCASE */}
-      <section className="w-full py-16 px-4 bg-[#140F11] border-t border-stone-800/80">
+      <section className="w-full py-16 px-4 bg-white border-t border-stone-200">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Card 1: Banquets & Event Celebrations */}
-          <div className="relative p-8 rounded-2xl bg-gradient-to-br from-[#231a1d] via-[#281e21] to-[#1c1517] border border-[#cba158]/30 overflow-hidden flex flex-col justify-between space-y-6 shadow-xl">
+          <div className="relative p-8 rounded-2xl bg-gradient-to-br from-[#faf8f5] via-white to-[#f5f2eb] border border-[#cba158]/35 overflow-hidden flex flex-col justify-between space-y-6 shadow-md spatial-card">
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className="w-8 h-8 rounded-lg bg-[#cba158]/15 border border-[#cba158]/30 flex items-center justify-center text-[#e5c179]">
+                <span className="w-8 h-8 rounded-xl bg-[#cba158]/15 border border-[#cba158]/30 flex items-center justify-center text-[#b8860b]">
                   <PartyPopper className="w-4 h-4" />
                 </span>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-[#cba158]">
+                <span className="text-[10px] uppercase font-bold tracking-widest text-[#b8860b]">
                   IMPERIAL BANQUETS & LAWNS
                 </span>
               </div>
-              <h3 className="font-['Oswald',sans-serif] font-bold text-2xl sm:text-3xl text-white uppercase tracking-tight">
+              <h3 className="font-['Oswald',sans-serif] font-bold text-2xl sm:text-3xl text-stone-900 uppercase tracking-tight">
                 Celebrate Royal Weddings & Grand Parties
               </h3>
-              <p className="text-xs text-stone-300 font-light leading-relaxed">
+              <p className="text-xs text-stone-600 font-light leading-relaxed">
                 Whether it's an intimate Awadhi dastarkhwan feast at our Hazratganj Royal Darbar Hall (150 Pax) or an open-air 500-guest celebration across our Highway Dhaba Grand Lawns, we orchestrate unforgettable culinary occasions.
               </p>
             </div>
@@ -965,7 +1065,7 @@ export function App() {
             <div className="pt-2 flex flex-wrap gap-3">
               <button
                 onClick={() => setIsBookEventOpen(true)}
-                className="px-6 py-3 rounded-xl bg-[#d4972e] hover:bg-[#e5a83b] text-black font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
+                className="px-6 py-3 rounded-xl bg-[#cba158] hover:bg-[#b8860b] text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md spatial-interactive"
               >
                 <span>Request Banquet / Event Booking</span>
                 <span>→</span>
@@ -974,20 +1074,20 @@ export function App() {
           </div>
 
           {/* Card 2: Royal Rewards Club */}
-          <div className="relative p-8 rounded-2xl bg-gradient-to-br from-[#1f191b] via-[#241c1f] to-[#171214] border border-[#cba158]/30 overflow-hidden flex flex-col justify-between space-y-6 shadow-xl">
+          <div className="relative p-8 rounded-2xl bg-gradient-to-br from-[#faf8f5] via-white to-[#f5f2eb] border border-[#cba158]/35 overflow-hidden flex flex-col justify-between space-y-6 shadow-md spatial-card">
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className="w-8 h-8 rounded-lg bg-[#cba158]/15 border border-[#cba158]/30 flex items-center justify-center text-[#e5c179]">
+                <span className="w-8 h-8 rounded-xl bg-[#cba158]/15 border border-[#cba158]/30 flex items-center justify-center text-[#b8860b]">
                   <Crown className="w-4 h-4" />
                 </span>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-[#cba158]">
+                <span className="text-[10px] uppercase font-bold tracking-widest text-[#b8860b]">
                   SHANGRILLA ROYAL CLUB
                 </span>
               </div>
-              <h3 className="font-['Oswald',sans-serif] font-bold text-2xl sm:text-3xl text-white uppercase tracking-tight">
+              <h3 className="font-['Oswald',sans-serif] font-bold text-2xl sm:text-3xl text-stone-900 uppercase tracking-tight">
                 Earn 5% Back with Royal Rewards
               </h3>
-              <p className="text-xs text-stone-300 font-light leading-relaxed">
+              <p className="text-xs text-stone-600 font-light leading-relaxed">
                 Every dining experience awards you points linked seamlessly with your mobile number. Redeem points for instant discounts on online orders and dine-in bills, and ascend through Bronze, Silver, Gold, and Shahi VIP tiers.
               </p>
             </div>
@@ -995,7 +1095,7 @@ export function App() {
             <div className="pt-2 flex flex-wrap gap-3">
               <button
                 onClick={() => setIsBecomeMemberOpen(true)}
-                className="px-6 py-3 rounded-xl bg-[#d4972e] hover:bg-[#e5a83b] text-black font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
+                className="px-6 py-3 rounded-xl bg-[#cba158] hover:bg-[#b8860b] text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md spatial-interactive"
               >
                 <span>Become a Member (+100 Pts)</span>
                 <span>→</span>
@@ -1003,7 +1103,7 @@ export function App() {
 
               <button
                 onClick={() => setIsLoyaltyOpen(true)}
-                className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs uppercase tracking-wider border border-white/15 transition-all"
+                className="px-5 py-3 rounded-xl bg-white hover:bg-stone-50 text-stone-800 font-bold text-xs uppercase tracking-wider border border-stone-200 transition-all shadow-sm spatial-interactive"
               >
                 View Points Balance
               </button>
@@ -1012,31 +1112,30 @@ export function App() {
         </div>
       </section>
 
-      {/* 8. FOOTER WITH DISCREET STAFF LOGIN (No public admin bar) */}
-      <footer className="w-full bg-[#0E0C0D] border-t border-stone-900 py-12 px-4 text-center text-xs text-stone-500">
+      {/* 8. LUXURY WHITE FOOTER WITH DISCREET STAFF LOGIN */}
+      <footer className="w-full bg-[#f5f2eb] border-t border-stone-200 py-12 px-4 text-center text-xs text-stone-600">
         <div className="max-w-4xl mx-auto space-y-5">
-          <span className="font-['Oswald',sans-serif] font-bold text-2xl text-white uppercase tracking-widest block">
+          <span className="font-['Oswald',sans-serif] font-bold text-2xl text-stone-900 uppercase tracking-widest block">
             SHANGRILLA
           </span>
-          <div className="flex justify-center gap-6 text-stone-400 text-xs flex-wrap">
-            <a href="#menu" className="hover:text-white">Menu</a>
-            <a href="#about" className="hover:text-white">About</a>
-            <a href="#locations" className="hover:text-white">Locations</a>
-            <button onClick={() => setIsTableBookingOpen(true)} className="hover:text-white">Book a Table</button>
-            <button onClick={() => setIsBookEventOpen(true)} className="hover:text-white">Book an Event</button>
-            <button onClick={() => setIsBecomeMemberOpen(true)} className="hover:text-white text-[#d4972e]">Become a Member</button>
-            <button onClick={() => setIsLoyaltyOpen(true)} className="hover:text-white">Royal Rewards</button>
-            <button onClick={() => setIsHistoryOpen(true)} className="hover:text-white">Order History</button>
+          <div className="flex justify-center gap-6 text-stone-600 text-xs flex-wrap">
+            <a href="#menu" className="hover:text-stone-900 transition-colors">Menu</a>
+            <a href="#about" className="hover:text-stone-900 transition-colors">About</a>
+            <a href="#locations" className="hover:text-stone-900 transition-colors">Locations</a>
+            <button onClick={() => setIsBookEventOpen(true)} className="hover:text-stone-900 transition-colors">Book an Event</button>
+            <button onClick={() => setIsBecomeMemberOpen(true)} className="hover:text-[#b8860b] text-[#b8860b] font-medium transition-colors">Become a Member</button>
+            <button onClick={() => setIsLoyaltyOpen(true)} className="hover:text-stone-900 transition-colors">Royal Rewards</button>
+            <button onClick={() => setIsHistoryOpen(true)} className="hover:text-stone-900 transition-colors">Order History</button>
             {/* Password protected staff login modal trigger */}
             <button
               onClick={() => setIsStaffLoginOpen(true)}
-              className="text-[#d4972e] hover:underline flex items-center gap-1 font-mono font-medium"
+              className="text-[#b8860b] hover:underline flex items-center gap-1 font-mono font-medium transition-colors"
             >
               <Lock className="w-3 h-3" />
               <span>Staff Login</span>
             </button>
           </div>
-          <p className="text-[11px] text-stone-600 font-light">
+          <p className="text-[11px] text-stone-500 font-light">
             © {new Date().getFullYear()} SHANGRILLA Restaurant & Dhaba. All rights reserved. Lucknow, Uttar Pradesh.
           </p>
         </div>
@@ -1061,14 +1160,6 @@ export function App() {
         onLoginSuccess={(role) => {
           setCurrentView(role);
         }}
-      />
-
-      {/* Table Booking Modal */}
-      <TableBookingModal
-        isOpen={isTableBookingOpen}
-        onClose={() => setIsTableBookingOpen(false)}
-        locations={locations}
-        defaultLocationId={activeLocation?.id}
       />
 
       {/* Become a Member Modal */}
@@ -1102,6 +1193,7 @@ export function App() {
           onClearCart={() => setCart([])}
           location={activeLocation}
           initialTable={tableParam || undefined}
+          initialCouponCode={appliedCouponCode}
           onOrderSuccess={(placedOrder) => {
             setCart([]);
             setActiveBillOrder(placedOrder);
@@ -1194,6 +1286,23 @@ export function App() {
           }}
         />
       )}
+
+      {/* Nawab AI Concierge Chatbot */}
+      <GeminiChatBot
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        onOpen={() => setIsChatOpen(true)}
+        activeLocation={activeLocation}
+        menuItems={menuItems}
+        onAddToCart={(dish) => {
+          handleAddToCart(dish, 1, []);
+          setIsCartOpen(true);
+        }}
+        onApplyCoupon={(code) => {
+          setAppliedCouponCode(code);
+          setIsCartOpen(true);
+        }}
+      />
     </div>
   );
 }
